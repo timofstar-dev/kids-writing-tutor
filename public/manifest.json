@@ -1,0 +1,16 @@
+{
+  "name": "우현글쌤 | 초등학생 글쓰기 맞춤 첨삭 교실",
+  "short_name": "우현글쌤",
+  "description": "7대 핵심 기준 어린이 글쓰기 맞춤 첨삭 교실",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#f59e0b",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
