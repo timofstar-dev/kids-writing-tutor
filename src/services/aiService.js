@@ -96,7 +96,7 @@ export async function evaluateKidsEssay({ apiKey, essayText, grade = '초등 전
   const ai = new GoogleGenAI({ apiKey });
 
   const prompt = `
-당신은 대한민국 최고의 초등학교 국어 전문 교사이자 다정한 어린이 글쓰기 첨삭 선생님 '아이글쌤'입니다.
+당신은 대한민국 최고의 초등학교 국어 전문 교사이자 다정한 어린이 글쓰기 첨삭 선생님 '우현글쌤'입니다.
 다음은 초등학생(${grade})이 작성한 글입니다:
 
 [학생의 글]
@@ -181,7 +181,7 @@ ${essayText}
       
       // 재시도 가능한 오류(트래픽 초과, 모델 미지원, 일시적 JSON 파싱 결함)일 경우 다음 모델로 자동 폴백
       if ((isHighDemand || isJsonParseError || isModelNotFound) && i < modelsToTry.length - 1) {
-        console.warn(`[아이글쌤] ${currentModel} 오류 (${err.message}). 다음 안정 모델(${modelsToTry[i + 1]})로 자동 전환 재시도 중...`);
+        console.warn(`[우현글쌤] ${currentModel} 오류 (${err.message}). 다음 안정 모델(${modelsToTry[i + 1]})로 자동 전환 재시도 중...`);
         // 짧은 대기 후 다음 모델 시도
         await new Promise(res => setTimeout(res, 600));
         continue;
@@ -240,7 +240,7 @@ export async function extractTextFromImage({ apiKey, base64Image, mimeType = 'im
       lastError = err;
       const isHighDemand = err.message?.includes('503') || err.message?.includes('high demand') || err.message?.includes('UNAVAILABLE') || err.message?.includes('429');
       if (isHighDemand && i < modelsToTry.length - 1) {
-        console.warn(`[아이글쌤 OCR] ${currentModel} 모델 트래픽 초과. 대체 모델(${modelsToTry[i + 1]})로 시도...`);
+        console.warn(`[우현글쌤 OCR] ${currentModel} 모델 트래픽 초과. 대체 모델(${modelsToTry[i + 1]})로 시도...`);
         await new Promise(res => setTimeout(res, 800));
         continue;
       }

@@ -295,7 +295,7 @@ export default function App() {
       <footer className="mt-16 bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400 no-print">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="flex items-center gap-1">
-            <span className="font-bold text-slate-600">아이글쌤</span> - 초등학생 글쓰기 완성 첨삭 프로그램
+            <span className="font-bold text-slate-600">우현글쌤</span> - 초등학생 글쓰기 완성 첨삭 프로그램
           </p>
           <p>© 2026 Kids Writing Tutor. 초등 국어 교육과정 7대 핵심 역량 반영 & 첨삭 기록 영구 보관.</p>
         </div>

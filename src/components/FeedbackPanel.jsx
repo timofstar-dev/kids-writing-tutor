@@ -154,7 +154,7 @@ export default function FeedbackPanel({
               <span className="text-xs sm:text-sm font-black text-yellow-200 tracking-wider">
                 {stamp}
               </span>
-              <span className="text-[10px] text-white/80 font-bold mt-0.5">아이글쌤 인증</span>
+              <span className="text-[10px] text-white/80 font-bold mt-0.5">우현글쌤 인증</span>
             </div>
           </div>
 
@@ -361,7 +361,7 @@ export default function FeedbackPanel({
                       <div className="bg-amber-50/80 border-l-4 border-amber-400 p-2.5 sm:p-3 rounded-r-xl text-xs text-amber-950 flex items-start gap-2 leading-relaxed">
                         <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                         <div className="break-keep">
-                          <strong className="text-amber-800">아이글쌤의 다정한 조언:</strong> {item.teacherTip}
+                          <strong className="text-amber-800">우현글쌤의 다정한 조언:</strong> {item.teacherTip}
                         </div>
                       </div>
                     )}
@@ -410,7 +410,7 @@ export default function FeedbackPanel({
                 초등 국어 7대 역량 진단 리포트 & 첨삭본
               </span>
               <h1 className="text-xl font-black mt-1 text-slate-900">
-                [아이글쌤] 초등 글쓰기 완성 첨삭 학습지
+                [우현글쌤] 초등 글쓰기 완성 첨삭 학습지
               </h1>
               <p className="text-[11px] text-slate-600 mt-0.5">
                 글 제목: {essayTitle ? `『${essayTitle}』` : '제목 없음'}
@@ -523,7 +523,7 @@ export default function FeedbackPanel({
                     <div className="bg-amber-50/80 border-l-2 border-amber-400 p-1.5 rounded-r-lg text-[10px] text-amber-950 flex items-start gap-1.5 leading-snug">
                       <Lightbulb className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
                       <div className="break-keep">
-                        <strong className="text-amber-800">아이글쌤 조언:</strong> {item.teacherTip}
+                        <strong className="text-amber-800">우현글쌤 조언:</strong> {item.teacherTip}
                       </div>
                     </div>
                   )}
@@ -541,10 +541,10 @@ export default function FeedbackPanel({
           <div className="border-b-2 border-slate-900 pb-2 mb-3.5 flex justify-between items-end">
             <div>
               <span className="text-[10px] font-bold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded border border-indigo-300">
-                아이글쌤 7대 기준 최종 완성본 & 원고지
+                우현글쌤 7대 기준 최종 완성본 & 원고지
               </span>
               <h1 className="text-lg font-black mt-0.5 text-slate-900">
-                [아이글쌤] 완성된 모범 글 & 200자 원고지 연습
+                [우현글쌤] 완성된 모범 글 & 200자 원고지 연습
               </h1>
               <p className="text-[11px] text-slate-600">
                 글 제목: {essayTitle ? `『${essayTitle}』` : '제목 없음'} · 학생: {studentName || '학생'}

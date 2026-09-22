@@ -130,7 +130,7 @@ export async function exportHistoryBackup() {
   const a = document.createElement('a');
   a.href = url;
   const dateStr = new Date().toISOString().slice(0, 10);
-  a.download = `아이글쌤_첨삭기록_백업_${dateStr}.json`;
+  a.download = `우현글쌤_첨삭기록_백업_${dateStr}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }

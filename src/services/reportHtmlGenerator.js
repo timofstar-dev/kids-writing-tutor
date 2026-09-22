@@ -32,7 +32,7 @@ export function openRecordInNewWindow(item) {
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>[아이글쌤 첨삭표] ${item.title || '글쓰기 첨삭 리포트'} - ${item.studentName || '학생'}</title>
+  <title>[우현글쌤 첨삭표] ${item.title || '글쓰기 첨삭 리포트'} - ${item.studentName || '학생'}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Sans+KR:wght@400;600;800&display=swap" rel="stylesheet">
@@ -337,7 +337,7 @@ export function openRecordInNewWindow(item) {
     
     <div class="header">
       <div>
-        <h1>[아이글쌤] 초등 글쓰기 첨삭 리포트</h1>
+        <h1>[우현글쌤] 초등 글쓰기 첨삭 리포트</h1>
         <p>7대 핵심 기준 정밀 진단 및 1:1 맞춤 교정 결과지</p>
       </div>
       <div class="stamp">
@@ -402,7 +402,7 @@ export function openRecordInNewWindow(item) {
               <span class="diff-tag corr">고친 문장 ⭕</span>
               <span class="corr-text">${c.corrected}</span>
             </div>
-            ${c.teacherTip ? `<div class="tip-box">💡 <strong>아이글쌤의 꿀팁:</strong> ${c.teacherTip}</div>` : ''}
+            ${c.teacherTip ? `<div class="tip-box">💡 <strong>우현글쌤의 꿀팁:</strong> ${c.teacherTip}</div>` : ''}
           </div>
         `).join('')}
       </div>

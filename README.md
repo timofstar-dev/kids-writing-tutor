@@ -1,4 +1,4 @@
-# ✏️ 아이글쌤 (Kids Writing Tutor)
+# ✏️ 우현글쌤 (Kids Writing Tutor)
 > 초등학생 글쓰기 완성을 위한 맞춤형 AI 첨삭 교실 웹 프로그램
 
 ---

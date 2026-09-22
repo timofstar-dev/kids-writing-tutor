@@ -540,7 +540,7 @@ export default function InputPanel({
         <div className="flex items-center justify-between mb-2.5">
           <span className="text-xs font-bold text-slate-600 flex items-center gap-1">
             <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-            아이글쌤의 7대 정밀 첨삭 영역:
+            우현글쌤의 7대 정밀 첨삭 영역:
           </span>
           <span className="text-[11px] text-slate-400">초등학교 교육과정 준수</span>
         </div>
@@ -584,7 +584,7 @@ export default function InputPanel({
           {isEvaluating ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin text-white" />
-              <span>아이글쌤이 7가지 기준으로 정성껏 글을 읽고 첨삭 중입니다...</span>
+              <span>우현글쌤이 7가지 기준으로 정성껏 글을 읽고 첨삭 중입니다...</span>
             </>
           ) : (
             <>

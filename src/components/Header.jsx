@@ -27,7 +27,7 @@ export default function Header({
             <div className="shrink-0">
               <div className="flex items-center gap-1.5">
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 flex items-center gap-1.5">
-                  아이글쌤
+                  우현글쌤
                   <span className="text-[11px] bg-amber-100 text-amber-800 font-bold px-2 py-0.2 rounded-full border border-amber-300/60">
                     초등 글쓰기 완성
                   </span>
