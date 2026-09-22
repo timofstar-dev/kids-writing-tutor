@@ -26,10 +26,10 @@ function formatErrorMessage(err) {
   const errMsg = err?.message || String(err);
   
   if (errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('UNAVAILABLE')) {
-    return '현재 구글 AI 서버에 일시적인 접속 폭주(503)가 발생했습니다. 잠시 후(약 10~20초 뒤) 다시 시도해주시면 정상 작동합니다.';
+    return '현재 구글 AI 서버에 일시적인 접속 폭주(503)가 발생했습니다. 잠시 후(약 5~10초 뒤) 다시 시도해주시면 정상 작동합니다.';
   }
   if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED')) {
-    return '단시간에 너무 많은 요청이 발생했습니다(429). 10초 정도 잠시 기다린 후 다시 눌러주세요.';
+    return '단시간에 너무 많은 요청이 발생했습니다(429). 5초 정도 잠시 기다린 후 다시 눌러주세요.';
   }
   if (errMsg.includes('404') || errMsg.includes('not found')) {
     return '선택한 AI 모델을 사용할 수 없습니다. 상단 설정에서 최신 모델(Gemini 3.1 Flash Lite)로 변경해주세요.';
@@ -37,8 +37,55 @@ function formatErrorMessage(err) {
   if (errMsg.includes('API_KEY_INVALID') || errMsg.includes('API key not valid')) {
     return 'Gemini API 키가 올바르지 않습니다. 상단 [키 등록 필요]에서 키를 다시 확인해주세요.';
   }
+  if (errMsg.includes('JSON') || errMsg.includes('SyntaxError') || errMsg.includes('position') || errMsg.includes('non-whitespace character')) {
+    return 'AI 응답 형식을 처리하는 중 일시적인 문자 오류가 발생했습니다. 상단의 [⚡ 안정적인 모델로 재시도] 또는 [첨삭 받기]를 한 번 더 눌러주세요.';
+  }
   
   return errMsg;
+}
+
+/**
+ * AI 응답 텍스트에서 순수한 JSON 객체를 정밀 추출하고 파싱
+ * (Gemini가 JSON 본문 앞뒤에 마크다운이나 사족을 덧붙이는 현상을 100% 방어)
+ */
+function parseAiJsonResponse(rawText) {
+  if (!rawText || !rawText.trim()) {
+    throw new Error('AI 응답 내용이 비어 있습니다.');
+  }
+
+  let text = rawText.trim();
+
+  // 1. 마크다운 코드 블록 표기 제거
+  text = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '');
+  text = text.replace(/\s*```$/i, '');
+
+  // 2. 가장 바깥쪽의 시작 중괄호 '{' 와 끝 중괄호 '}'를 찾아 그 사이의 순수 JSON만 슬라이스
+  // (예: Unexpected non-whitespace character after JSON at position ... 방지)
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    text = text.substring(firstBrace, lastBrace + 1);
+  }
+
+  // 3. 1차 표준 JSON 파싱 시도
+  try {
+    return JSON.parse(text);
+  } catch (err1) {
+    // 4. 후행 쉼표(trailing comma: `,}` 또는 `,]`) 등 문법 결함 정제 후 2차 시도
+    try {
+      const sanitized = text
+        .replace(/,\s*([}\]])/g, '$1') // trailing comma 제거
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, (ch) => {
+          if (ch === '\n' || ch === '\r' || ch === '\t') return ch;
+          return '';
+        });
+      return JSON.parse(sanitized);
+    } catch (err2) {
+      console.warn('JSON 정밀 파싱 실패, 원본 발췌:', text.slice(0, 300));
+      throw new Error(`AI 응답 형식(JSON) 파싱 오류: ${err1.message}`);
+    }
+  }
 }
 
 export async function evaluateKidsEssay({ apiKey, essayText, grade = '초등 전학년', modelName = 'gemini-3.1-flash-lite' }) {
@@ -74,7 +121,7 @@ ${essayText}
 - **반드시 최소 5개 이상(권장 6개~10개 내외)**의 교정 카드를 'sentenceCorrections' 목록에 생성해야 합니다.
 - 만약 문법적 오류가 5개 미만인 우수한 글이라도, 더 풍부하고 품격 있는 어휘 제안, 접속어 다듬기, 주어·목적어 보충, 문장 호흡 조절 등 글의 완성도를 높이는 발전 제안을 포함하여 **반드시 최소 5개 이상**을 채워주세요.
 
-[반드시 준수할 출력 형식 (순수한 JSON 문자열만 출력)]:
+[반드시 준수할 출력 형식 (JSON 앞뒤에 마크다운이나 인사말 없이 오직 순수한 JSON만 출력)]:
 {
   "stamp": "참 잘했어요" | "생각이 반짝여요" | "표현력이 쑥쑥" | "최고의 글솜씨",
   "score7": {
@@ -101,7 +148,7 @@ ${essayText}
 }
 `;
 
-  // 요청 모델을 우선으로 하고, 503 트래픽 폭주 발생 시 대체 모델들로 순차적 자동 시도
+  // 요청 모델을 우선으로 하고, 오류 발생 시 대체 모델들로 순차적 자동 시도
   const modelsToTry = [modelName, ...STABLE_MODELS_CASCADE.filter(m => m !== modelName)];
   let lastError = null;
 
@@ -116,29 +163,27 @@ ${essayText}
         }
       });
 
-      let rawText = response.text;
-      if (!rawText) {
-        throw new Error('AI 응답 내용이 비어 있습니다.');
-      }
+      const rawText = response.text;
+      const result = parseAiJsonResponse(rawText);
 
-      rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const result = JSON.parse(rawText);
+      // 필수 프로퍼티 안전 검증 및 기본값 보장
+      if (!result.score7) result.score7 = {};
+      if (!Array.isArray(result.sentenceCorrections)) result.sentenceCorrections = [];
+      if (!result.finalPolishedEssay) result.finalPolishedEssay = essayText;
+
       return result;
 
     } catch (err) {
       lastError = err;
       const isHighDemand = err.message?.includes('503') || err.message?.includes('high demand') || err.message?.includes('UNAVAILABLE') || err.message?.includes('429');
+      const isJsonParseError = err.message?.includes('JSON') || err.name === 'SyntaxError' || err.message?.includes('position');
+      const isModelNotFound = err.message?.includes('404');
       
-      if (isHighDemand && i < modelsToTry.length - 1) {
-        console.warn(`[아이글쌤] ${currentModel} 모델 트래픽 초과 (503/429). 대체 모델(${modelsToTry[i + 1]})로 자동 전환 중...`);
+      // 재시도 가능한 오류(트래픽 초과, 모델 미지원, 일시적 JSON 파싱 결함)일 경우 다음 모델로 자동 폴백
+      if ((isHighDemand || isJsonParseError || isModelNotFound) && i < modelsToTry.length - 1) {
+        console.warn(`[아이글쌤] ${currentModel} 오류 (${err.message}). 다음 안정 모델(${modelsToTry[i + 1]})로 자동 전환 재시도 중...`);
         // 짧은 대기 후 다음 모델 시도
-        await new Promise(res => setTimeout(res, 800));
-        continue;
-      }
-
-      // 404 모델 지원 만료 에러일 때도 다음 모델 시도
-      if (err.message?.includes('404') && i < modelsToTry.length - 1) {
-        console.warn(`[아이글쌤] ${currentModel} 모델 사용 불가. 대체 모델(${modelsToTry[i + 1]})로 시도 중...`);
+        await new Promise(res => setTimeout(res, 600));
         continue;
       }
 
