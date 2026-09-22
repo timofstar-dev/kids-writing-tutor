@@ -2,7 +2,7 @@
  * 첨삭 기록을 새 창(새 탭)에서 바로 열람하고 인쇄할 수 있는 독립 HTML 문서 생성기
  */
 
-import { generateFullProofreadTokens } from './proofreadingEngine';
+import { generateFullProofreadTokens, formatTextToWongojiRows } from './proofreadingEngine';
 
 export function openRecordInNewWindow(item) {
   const newWin = window.open('', '_blank');
@@ -47,15 +47,21 @@ export function openRecordInNewWindow(item) {
     proofreadTokensHtml += `<div style="min-height:2.8rem;padding:4px 0;display:flex;flex-wrap:wrap;align-items:baseline;">${lineHtml}</div>`;
   }
 
-  // 200자 원고지 셀 생성
+  // 원고지 행 단위 전체 모범 글 매핑 (20자 1줄)
   const polishedText = feedback.finalPolishedEssay || item.essayText || '';
-  const chars = polishedText.replace(/\n+/g, ' \n ').split('');
-  const totalCells = Math.max(100, Math.ceil(chars.length / 20) * 20);
-  let wongojiCellsHtml = '';
-  for (let i = 0; i < totalCells; i++) {
-    const ch = chars[i] || '';
-    const isNewline = ch === '\n';
-    wongojiCellsHtml += `<div class="wongoji-cell">${isNewline ? '↵' : ch}</div>`;
+  const wongojiRows = formatTextToWongojiRows(polishedText);
+  let wongojiRowsHtml = '';
+  for (let rIdx = 0; rIdx < wongojiRows.length; rIdx++) {
+    const row = wongojiRows[rIdx];
+    let rowCellsHtml = '';
+    for (let cIdx = 0; cIdx < row.length; cIdx++) {
+      const cell = row[cIdx];
+      const isSpace = cell.type === 'space';
+      const isIndent = cell.type === 'indent';
+      const cellContent = cell.char || (isSpace ? '<span style="color:#fda4af;font-size:10px;font-weight:bold;">∨</span>' : isIndent ? '<span style="color:#d97706;font-size:8px;">들임</span>' : '');
+      rowCellsHtml += `<div class="wongoji-cell" style="aspect-ratio:1/1;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;position:relative;">${cellContent}</div>`;
+    }
+    wongojiRowsHtml += `<div style="display:grid;grid-template-columns:repeat(20, minmax(0, 1fr));gap:1px;background:#ef4444;page-break-inside:avoid;break-inside:avoid;">${rowCellsHtml}</div>`;
   }
 
   const htmlContent = `
@@ -460,12 +466,11 @@ export function openRecordInNewWindow(item) {
         </div>
       </div>
 
-      <!-- 200자 원고지 양식 -->
-      <h2 class="section-title page-break">📝 200자 원고지 양식 미리보기</h2>
-      <div class="wongoji-container">
-        <div class="wongoji-grid">
-          ${wongojiCellsHtml}
-        </div>
+      <!-- 원고지 바른 글쓰기 양식 (전체 글자수 동적 반영) -->
+      <h2 class="section-title page-break">📝 원고지 바른 글쓰기 양식 (총 ${wongojiRows.length}줄 · ${wongojiRows.length * 20}칸)</h2>
+      <p style="font-size:12px;color:#64748b;margin-bottom:12px;">모범 글의 띄어쓰기(∨)와 문단 들여쓰기 규정에 맞추어 전체 글을 원고지에 배치하였습니다. 보고 따라 쓰며 연습해보세요.</p>
+      <div class="wongoji-container" style="border:2px solid #ef4444;background:#ef4444;padding:2px;border-radius:12px;display:flex;flex-direction:column;gap:1px;">
+        ${wongojiRowsHtml}
       </div>
 
     </div>

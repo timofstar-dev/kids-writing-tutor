@@ -32,7 +32,8 @@ export default function InputPanel({
   isEvaluating,
   selectedGrade,
   apiKey,
-  modelName
+  modelName,
+  onOpenPdfOcrModal
 }) {
   const [activeTab, setActiveTab] = useState('text'); // 'text' | 'scan'
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -213,6 +214,15 @@ export default function InputPanel({
             <span>스캔 PDF / 사진 대조 뷰어</span>
             <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded-md">스마트</span>
           </button>
+
+          <button
+            onClick={onOpenPdfOcrModal}
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 text-white shadow-xs hover:shadow transition-all"
+            title="학생 글쓰기 PDF를 마크다운이나 구글 문서 형태로 똑같이 일괄 변환하기"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
+            <span>PDF OCR 스튜디오</span>
+          </button>
         </div>
 
         {/* 샘플 글 바로 불러오기 */}
@@ -322,6 +332,24 @@ export default function InputPanel({
       {/* 탭 2: 스캔 PDF / 사진 대조 뷰어 (사용자 핵심 요구사항) */}
       {activeTab === 'scan' && (
         <div className="space-y-4">
+          
+          {/* 다중 페이지 PDF 일괄 변환 바로가기 배너 */}
+          <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-pink-50 border border-purple-200/80 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2.5 text-xs">
+              <span className="text-xl shrink-0">📄</span>
+              <div>
+                <p className="font-extrabold text-purple-950">다중 페이지 PDF를 마크다운이나 구글 문서 형태로 똑같이 변환하고 싶으신가요?</p>
+                <p className="text-[11px] text-purple-700 mt-0.5">전체 페이지 일괄 OCR, 구글문서(Rich Text) 서식 복사, .md 다운로드를 지원하는 전용 스튜디오를 열어보세요.</p>
+              </div>
+            </div>
+            <button
+              onClick={onOpenPdfOcrModal}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs hover:shadow transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+              <span>PDF OCR 스튜디오 열기</span>
+            </button>
+          </div>
           
           <div className="bg-indigo-50/60 border border-indigo-200/80 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
             <div className="flex items-center gap-3">

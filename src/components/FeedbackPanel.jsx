@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import ProofreadTextViewer from './ProofreadTextViewer';
-import { generateFullProofreadTokens } from '../services/proofreadingEngine';
+import { generateFullProofreadTokens, formatTextToWongojiRows } from '../services/proofreadingEngine';
 
 export default function FeedbackPanel({ 
   feedback, 
@@ -33,6 +33,7 @@ export default function FeedbackPanel({
   const [activeViewTab, setActiveViewTab] = useState('proofread'); // 'proofread' | 'diff' | 'wongoji' | 'clean' | 'print'
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('전체');
   const [copied, setCopied] = useState(false);
+  const [showSpaceGuide, setShowSpaceGuide] = useState(true);
 
   // 첨삭 완료 시 기분 좋은 축하 콘페티 효과 발생
   useEffect(() => {
@@ -180,33 +181,123 @@ export default function FeedbackPanel({
     return null;
   };
 
-  // 200자 원고지 칸 배열 변환 (20자 1줄 기준)
-  const renderWongojiGrid = () => {
-    const chars = finalPolishedEssay.replace(/\n+/g, ' \n ').split('');
-    const totalCells = Math.max(100, Math.ceil(chars.length / 20) * 20);
+  // 원고지 행(Row) 단위 전체 글 매핑 (20자 1줄)
+  const wongojiRows = useMemo(() => {
+    return formatTextToWongojiRows(finalPolishedEssay);
+  }, [finalPolishedEssay]);
+  const totalWongojiCells = wongojiRows.length * 20;
 
+  // 원고지 전체 내용 격자 뷰
+  const renderWongojiGrid = () => {
     return (
-      <div className="bg-white p-6 rounded-3xl border-2 border-red-300 shadow-sm overflow-x-auto">
-        <div className="text-center mb-4 border-b border-red-200 pb-3">
-          <span className="text-xs font-bold text-red-700 uppercase tracking-widest">
-            200자 원고지 양식 미리보기 (20자 × {Math.ceil(totalCells / 20)}줄)
-          </span>
+      <div className="bg-white p-6 sm:p-8 rounded-3xl border-2 border-red-300 shadow-sm space-y-4">
+        {/* 상단 안내 바 */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-red-200 pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-black border border-red-200">
+                국어 표준 원고지 규격 (20자 1줄)
+              </span>
+              <h3 className="text-base font-black text-slate-900">
+                📝 원고지 바른 글쓰기 (총 {wongojiRows.length}줄 · {totalWongojiCells}칸)
+              </h3>
+            </div>
+            <p className="text-xs text-slate-600 mt-1">
+              완성된 모범 글의 <strong>전체 내용</strong>이 원고지 작성 규칙(새 문단 1칸 들여쓰기, 낱말 사이 띄어쓰기, 문장부호 표기)에 맞춰 모두 배치되었습니다. 보고 띄어쓰기를 익히며 바르게 써보세요.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowSpaceGuide(prev => !prev)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                showSpaceGuide
+                  ? 'bg-rose-50 text-rose-700 border-rose-300 shadow-xs'
+                  : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+              }`}
+              title="띄어쓰기 칸(∨) 가이드 표시 토글"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-rose-500" />
+              <span>{showSpaceGuide ? '띄어쓰기 칸 안내 켜짐' : '띄어쓰기 칸 안내 끄기'}</span>
+            </button>
+          </div>
         </div>
-        <div className="wongoji-grid min-w-[720px]">
-          {Array.from({ length: totalCells }).map((_, idx) => {
-            const char = chars[idx] || '';
-            const isNewline = char === '\n';
-            return (
-              <div 
-                key={idx} 
-                className="wongoji-cell select-none"
-              >
-                <span className="z-10 font-bold text-slate-800">
-                  {isNewline ? '↵' : char}
-                </span>
+
+        {/* 원고지 행렬 (가로 스크롤 대응) */}
+        <div className="overflow-x-auto pb-2">
+          <div className="min-w-[760px] bg-red-400 p-[2px] rounded-2xl border-2 border-red-500 space-y-[1px] shadow-xs">
+            {wongojiRows.map((row, rowIdx) => (
+              <div key={`row-${rowIdx}`} className="flex items-stretch bg-red-400">
+                {/* 줄 번호 */}
+                <div className="w-8 flex items-center justify-center bg-red-50/90 text-red-800 text-[10px] font-black shrink-0 select-none border-r border-red-300">
+                  {rowIdx + 1}
+                </div>
+
+                {/* 20칸 그리드 */}
+                <div className="grid grid-cols-20 gap-[1px] flex-1 bg-red-400">
+                  {row.map((cell, colIdx) => {
+                    const isSpace = cell.type === 'space';
+                    const isIndent = cell.type === 'indent';
+                    return (
+                      <div 
+                        key={`cell-${rowIdx}-${colIdx}`} 
+                        className="wongoji-cell select-text relative aspect-square bg-white flex items-center justify-center text-sm sm:text-base font-bold text-slate-900 group"
+                        title={
+                          isIndent 
+                            ? '문단 시작: 1칸 들여쓰기' 
+                            : isSpace 
+                              ? '낱말 사이: 1칸 띄어쓰기' 
+                              : cell.char ? `글자 '${cell.char}'` : '빈 칸'
+                        }
+                      >
+                        {/* 실제 글자 */}
+                        {cell.char && (
+                          <span className="z-10 font-black text-slate-800 tracking-normal font-sans">
+                            {cell.char}
+                          </span>
+                        )}
+
+                        {/* 띄어쓰기 칸 안내 가이드 (어린이가 보고 띄어쓰기할 수 있도록) */}
+                        {isSpace && showSpaceGuide && (
+                          <span className="z-10 text-[11px] font-black text-rose-400/80 select-none scale-90">
+                            ∨
+                          </span>
+                        )}
+
+                        {/* 문단 첫 칸 들여쓰기 안내 가이드 */}
+                        {isIndent && (
+                          <span className="z-10 text-[8.5px] font-bold text-amber-500/70 select-none">
+                            들임
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 우측 누적 칸수 카운터 */}
+                <div className="w-9 flex items-center justify-center bg-red-50/90 text-red-700 text-[10px] font-bold shrink-0 select-none border-l border-red-300">
+                  {(rowIdx + 1) * 20}
+                </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded bg-amber-100 border border-amber-300 inline-block"></span>
+              <span>[들임]: 새 문단 시작 시 1칸 비움</span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="text-rose-500 font-black text-xs">∨</span>
+              <span>단어 사이 띄어쓰기 칸</span>
+            </span>
+          </div>
+          <span className="font-semibold text-slate-600">
+            총 글자수(공백 포함): {finalPolishedEssay.length}자
+          </span>
         </div>
       </div>
     );
@@ -382,7 +473,7 @@ export default function FeedbackPanel({
               }`}
             >
               <Grid className="w-4 h-4 text-rose-500" />
-              <span>200자 원고지 격자</span>
+              <span>원고지 바른 글쓰기 ({wongojiRows.length}줄)</span>
             </button>
           </div>
 
@@ -714,32 +805,42 @@ export default function FeedbackPanel({
             </div>
           </div>
 
-          {/* 200자 원고지 양식 미리보기 (학생이 직접 써보는 연습 칸) */}
-          <div className="border border-slate-300 rounded-2xl p-3 bg-white">
-            <div className="text-center mb-2.5 pb-1.5 border-b border-slate-200">
+          {/* 원고지 바른 글쓰기 양식 (전체 글자수 동적 반영) */}
+          <div className="border border-slate-300 rounded-2xl p-3 bg-white print-avoid-break">
+            <div className="text-center mb-2 pb-1.5 border-b border-slate-200">
               <h3 className="text-xs font-bold text-red-700">
-                📝 200자 원고지 바른 글쓰기 양식 (20자 × 1줄)
+                📝 원고지 바른 글쓰기 연습 (총 {wongojiRows.length}줄 · {totalWongojiCells}칸)
               </h3>
               <p className="text-[10px] text-slate-500 mt-0.5">
-                원고지 칸에 맞추어 띄어쓰기와 문장 부호를 바르게 쓰는 연습을 해보세요.
+                모범 글의 띄어쓰기(∨)와 문장 부호를 보면서 원고지에 바르게 쓰는 연습을 해보세요.
               </p>
             </div>
-            <div className="wongoji-grid text-xs">
-              {(() => {
-                const chars = finalPolishedEssay.replace(/\n+/g, ' \n ').split('');
-                const totalCells = Math.min(160, Math.max(80, Math.ceil(chars.length / 20) * 20));
-                return Array.from({ length: totalCells }).map((_, idx) => {
-                  const char = chars[idx] || '';
-                  const isNewline = char === '\n';
-                  return (
-                    <div key={idx} className="wongoji-cell select-none text-xs">
-                      <span className="z-10 font-bold text-slate-800 text-[11px]">
-                        {isNewline ? '↵' : char}
-                      </span>
+            
+            <div className="bg-red-400 p-[1px] rounded-lg border border-red-500 space-y-[1px]">
+              {wongojiRows.map((row, rowIdx) => (
+                <div key={`print-row-${rowIdx}`} className="grid grid-cols-20 gap-[1px] bg-red-400 print-avoid-break break-inside-avoid">
+                  {row.map((cell, colIdx) => (
+                    <div 
+                      key={`print-cell-${rowIdx}-${colIdx}`} 
+                      className="wongoji-cell select-none text-xs aspect-square bg-white flex items-center justify-center relative"
+                    >
+                      {cell.char ? (
+                        <span className="z-10 font-bold text-slate-900 text-[10.5px]">
+                          {cell.char}
+                        </span>
+                      ) : cell.type === 'space' ? (
+                        <span className="z-10 text-[9px] font-black text-rose-300 select-none">
+                          ∨
+                        </span>
+                      ) : cell.type === 'indent' ? (
+                        <span className="z-10 text-[7px] text-amber-600/70 select-none">
+                          들임
+                        </span>
+                      ) : null}
                     </div>
-                  );
-                });
-              })()}
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
 

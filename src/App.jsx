@@ -5,6 +5,7 @@ import FeedbackPanel from './components/FeedbackPanel';
 import KoreanRulesModal from './components/KoreanRulesModal';
 import ApiKeyModal from './components/ApiKeyModal';
 import HistoryModal from './components/HistoryModal';
+import PdfOcrModal from './components/PdfOcrModal';
 import { evaluateKidsEssay } from './services/aiService';
 import { getAllHistory, saveHistoryItem, deleteHistoryItem, clearAllHistory } from './services/historyStorage';
 import { SAMPLE_ESSAYS } from './data/sampleEssays';
@@ -31,6 +32,7 @@ export default function App() {
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [isApiModalOpen, setIsApiModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isPdfOcrModalOpen, setIsPdfOcrModalOpen] = useState(false);
 
   // 기록 보관함 상태
   const [historyList, setHistoryList] = useState([]);
@@ -126,6 +128,16 @@ export default function App() {
   };
 
   // 보관함에서 이전 기록 불러오기
+  // PDF OCR 변환 결과 적용 핸들러
+  const handleApplyOcrToMain = ({ title, studentName: sName, body }) => {
+    if (title) setEssayTitle(title);
+    if (sName) setStudentName(sName);
+    if (body) setEssayText(body);
+    setSaveSuccessMsg('✨ 변환된 학생 글이 입력창에 자동 등록되었습니다! 바로 [첨삭 받기]를 눌러보세요.');
+    setTimeout(() => setSaveSuccessMsg(''), 4500);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleLoadHistoryItem = (item) => {
     setCurrentHistoryId(item.id);
     setEssayTitle(item.title || '');
@@ -182,6 +194,7 @@ export default function App() {
         onOpenRulesModal={() => setIsRulesModalOpen(true)}
         onOpenApiModal={() => setIsApiModalOpen(true)}
         onOpenHistoryModal={() => setIsHistoryModalOpen(true)}
+        onOpenPdfOcrModal={() => setIsPdfOcrModalOpen(true)}
         historyCount={historyList.length}
         apiKey={apiKey}
         hasFeedback={!!feedback}
@@ -220,6 +233,7 @@ export default function App() {
             selectedGrade={selectedGrade}
             apiKey={apiKey}
             modelName={modelName}
+            onOpenPdfOcrModal={() => setIsPdfOcrModalOpen(true)}
           />
         </section>
 
@@ -326,6 +340,16 @@ export default function App() {
         onDeleteItem={handleDeleteHistoryItem}
         onClearAll={handleClearAllHistory}
         onRefreshHistory={loadHistoryList}
+      />
+
+      {/* 학생 글쓰기 PDF ➔ 마크다운 & 구글 문서 변환기 모달 */}
+      <PdfOcrModal
+        isOpen={isPdfOcrModalOpen}
+        onClose={() => setIsPdfOcrModalOpen(false)}
+        apiKey={apiKey}
+        modelName={modelName}
+        onOpenApiModal={() => setIsApiModalOpen(true)}
+        onApplyToMain={handleApplyOcrToMain}
       />
 
     </div>

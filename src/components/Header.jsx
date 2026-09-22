@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Key, Sparkles, Printer, GraduationCap, FolderOpen } from 'lucide-react';
+import { BookOpen, Key, Sparkles, Printer, GraduationCap, FolderOpen, FileCheck2 } from 'lucide-react';
 
 export default function Header({ 
   selectedGrade, 
@@ -7,6 +7,7 @@ export default function Header({
   onOpenRulesModal, 
   onOpenApiModal, 
   onOpenHistoryModal,
+  onOpenPdfOcrModal,
   historyCount = 0,
   apiKey,
   hasFeedback,
@@ -40,13 +41,22 @@ export default function Header({
           </div>
 
           {/* 모바일용 백과 단축 버튼 */}
-          <button
-            onClick={onOpenRulesModal}
-            className="lg:hidden p-2 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-200"
-            title="헷갈리는 우리말 백과"
-          >
-            <BookOpen className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1.5 lg:hidden">
+            <button
+              onClick={onOpenPdfOcrModal}
+              className="p-2 text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-xl border border-purple-200"
+              title="PDF ➔ 마크다운/구글문서 OCR"
+            >
+              <FileCheck2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onOpenRulesModal}
+              className="p-2 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-200"
+              title="헷갈리는 우리말 백과"
+            >
+              <BookOpen className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* 우측 컨트롤 영역: 학년 선택 + 액션 버튼 (한 줄 유지) */}
@@ -71,6 +81,17 @@ export default function Header({
               </button>
             ))}
           </div>
+
+          {/* ★ 핵심 추가: PDF ➔ 마크다운/구글문서 OCR 버튼 */}
+          <button
+            onClick={onOpenPdfOcrModal}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 text-white font-black text-xs rounded-xl shadow-xs hover:shadow-md transition-all whitespace-nowrap shrink-0 group"
+            title="학생이 쓴 PDF 자료를 마크다운이나 구글 문서 형태로 똑같이 변환하기 (OCR)"
+          >
+            <FileCheck2 className="w-3.5 h-3.5 text-purple-200 group-hover:scale-110 transition-transform" />
+            <span>PDF OCR 변환</span>
+            <Sparkles className="w-3 h-3 text-yellow-300 animate-pulse" />
+          </button>
 
           {/* 기록 보관함 버튼 */}
           <button

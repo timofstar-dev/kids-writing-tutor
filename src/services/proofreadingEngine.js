@@ -371,3 +371,83 @@ export function extractSpacingIssues(tokenLines = []) {
 
   return issues;
 }
+
+/**
+ * 국어 표준 원고지 작성 규정(20자 1줄)에 맞추어 전체 텍스트를 원고지 칸 행(Row) 배열로 변환
+ * - 200자 고정이 아닌, 전체 글자수와 문단 수에 맞춰 동적으로 행(Row) 생성
+ * - 새 문단 시작 시 첫 칸 들여쓰기 (1칸 비움)
+ * - 낱말 사이 띄어쓰기는 1칸 비움 (단, 줄 첫 칸에는 띄어쓰기 공백 제외)
+ * - 문장부호(. , ! ? ” ’)가 줄 첫 칸에 오지 않도록 직전 줄 20번째 칸에 결합
+ * - 문단 끝남 시 남은 칸은 비우고 다음 줄로 이동
+ */
+export function formatTextToWongojiRows(text = '') {
+  if (!text || !text.trim()) {
+    return Array.from({ length: 5 }, () =>
+      Array.from({ length: 20 }, () => ({ char: '', type: 'empty' }))
+    );
+  }
+
+  const paragraphs = text.split('\n');
+  const rows = [];
+  let currentRow = [];
+
+  const PUNC_CANNOT_START_LINE = ['.', ',', '!', '?', '”', '’', ':', ';', '~'];
+
+  for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
+    const rawP = paragraphs[pIdx];
+    const p = rawP.trim();
+    if (!p) continue;
+
+    // 새 문단 시작 시 1번째 칸 들여쓰기 (1칸 비움)
+    currentRow.push({ char: '', type: 'indent', label: '들여쓰기' });
+
+    for (let i = 0; i < p.length; i++) {
+      const ch = p[i];
+
+      // 20칸이 차면 다음 줄로
+      if (currentRow.length === 20) {
+        rows.push(currentRow);
+        currentRow = [];
+      }
+
+      // 문장부호가 줄 첫머리에 오는 것 방지: 직전 줄 20번째 칸 글자 뒤에 병합
+      if (PUNC_CANNOT_START_LINE.includes(ch) && currentRow.length === 0 && rows.length > 0) {
+        const prevRow = rows[rows.length - 1];
+        const lastCell = prevRow[19];
+        if (lastCell) {
+          lastCell.char = (lastCell.char || '') + ch;
+          continue;
+        }
+      }
+
+      if (ch === ' ') {
+        // 줄 첫머리(0번째 칸)에는 띄어쓰기 빈칸을 두지 않음
+        if (currentRow.length === 0) {
+          continue;
+        }
+        currentRow.push({ char: '', type: 'space', label: '띄어쓰기' });
+      } else {
+        currentRow.push({ char: ch, type: 'char' });
+      }
+    }
+
+    // 문단 끝남: 남은 칸들을 빈 칸으로 채우고 줄 마감
+    if (currentRow.length > 0) {
+      while (currentRow.length < 20) {
+        currentRow.push({ char: '', type: 'empty' });
+      }
+      rows.push(currentRow);
+      currentRow = [];
+    }
+  }
+
+  // 최소 1줄의 여유 빈 연습 줄 추가
+  if (rows.length > 0) {
+    const lastRow = rows[rows.length - 1];
+    if (lastRow.some(c => c.char)) {
+      rows.push(Array.from({ length: 20 }, () => ({ char: '', type: 'empty' })));
+    }
+  }
+
+  return rows;
+}
