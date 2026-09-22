@@ -49,9 +49,30 @@ export default function InputPanel({
   const [isExtractingOcr, setIsExtractingOcr] = useState(false);
   const [ocrStatusMessage, setOcrStatusMessage] = useState('');
   const [inputError, setInputError] = useState('');
+  const [isScanDragging, setIsScanDragging] = useState(false);
 
   const fileInputRef = useRef(null);
   const scanInputRef = useRef(null);
+
+  const handleScanDragOver = (e) => {
+    e.preventDefault();
+    setIsScanDragging(true);
+  };
+
+  const handleScanDragLeave = (e) => {
+    e.preventDefault();
+    setIsScanDragging(false);
+  };
+
+  const handleScanDrop = (e) => {
+    e.preventDefault();
+    setIsScanDragging(false);
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleScanUpload({ target: { files: [file] } });
+    }
+  };
 
   // 텍스트 파일 (.txt) 업로드 처리
   const handleTxtUpload = (e) => {
@@ -511,7 +532,14 @@ export default function InputPanel({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[480px]">
             
             {/* 좌측: 문서 뷰어 */}
-            <div className="lg:col-span-6 bg-slate-900 rounded-2xl p-3 flex flex-col relative overflow-hidden border-2 border-slate-700">
+            <div 
+              className={`lg:col-span-6 rounded-2xl p-3 flex flex-col relative overflow-hidden border-2 transition-colors ${
+                isScanDragging ? 'border-indigo-500 bg-slate-800' : 'border-slate-700 bg-slate-900'
+              }`}
+              onDragOver={handleScanDragOver}
+              onDragLeave={handleScanDragLeave}
+              onDrop={handleScanDrop}
+            >
               
               {/* 뷰어 툴바 */}
               <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-xs text-slate-300">
@@ -590,7 +618,7 @@ export default function InputPanel({
                     <div>
                       <p className="font-bold text-slate-400 text-sm">등록된 스캔 문서가 없습니다</p>
                       <p className="text-xs text-slate-600 mt-1">
-                        위쪽 [스캔 PDF/사진 선택] 버튼을 눌러 공책 사진을 등록하세요.
+                        이곳에 파일을 드래그 앤 드롭하거나 위 버튼을 눌러 등록하세요.
                       </p>
                     </div>
                   </div>

@@ -56,6 +56,7 @@ export default function PdfOcrModal({
   const [activeEditorTab, setActiveEditorTab] = useState('markdown'); // 'markdown' | 'gdocs_preview'
   const [errorMessage, setErrorMessage] = useState('');
   const [copySuccessMsg, setCopySuccessMsg] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -68,6 +69,29 @@ export default function PdfOcrModal({
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  // 드래그 앤 드롭 핸들러
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (isProcessing) return;
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleFileUpload({ target: { files: [file] } });
+    }
+  };
 
   // 파일 업로드 처리
   const handleFileUpload = async (e) => {
@@ -504,7 +528,14 @@ export default function PdfOcrModal({
           {/* ======================================================== */}
           {/* [좌측] 원본 PDF / 이미지 뷰어 (5컬럼) */}
           {/* ======================================================== */}
-          <div className="lg:col-span-5 bg-slate-900/95 border-r border-slate-700/60 flex flex-col overflow-hidden text-slate-100">
+          <div 
+            className={`lg:col-span-5 bg-slate-900/95 border-r border-slate-700/60 flex flex-col overflow-hidden text-slate-100 transition-colors ${
+              isDragging ? 'ring-2 ring-indigo-500 ring-inset bg-slate-800/95' : ''
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             
             {/* 좌측 상단 툴바 */}
             <div className="p-3 bg-slate-800/90 border-b border-slate-700 flex items-center justify-between gap-2 shrink-0">
@@ -586,7 +617,8 @@ export default function PdfOcrModal({
                   <div>
                     <h4 className="text-sm font-bold text-slate-200">학생 글쓰기 PDF 업로드</h4>
                     <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                      초등학생이 쓴 공책 스캔본, 원고지 사진, 디지털 PDF 파일을 올려주세요.
+                      초등학생이 쓴 공책 스캔본, 원고지 사진, 디지털 PDF 파일을 올려주세요.<br/>
+                      이곳에 파일을 드래그 앤 드롭하거나 아래 버튼을 클릭하세요.
                     </p>
                   </div>
                   <label className="inline-block cursor-pointer px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all">
