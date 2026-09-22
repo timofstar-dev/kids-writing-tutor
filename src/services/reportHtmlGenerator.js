@@ -275,10 +275,59 @@ export function openRecordInNewWindow(item) {
     .btn-close { background: #e2e8f0; color: #334155; }
 
     @media print {
-      body { background: white; padding: 0; }
-      .container { border: none; box-shadow: none; max-width: 100%; }
-      .action-bar { display: none; }
-      .page-break { page-break-before: always; }
+      @page {
+        size: A4 portrait;
+        margin: 10mm 12mm;
+      }
+      body {
+        background: white !important;
+        padding: 0 !important;
+        font-size: 10pt !important;
+        line-height: 1.35 !important;
+      }
+      .container {
+        border: none !important;
+        box-shadow: none !important;
+        max-width: 100% !important;
+        border-radius: 0 !important;
+      }
+      .action-bar { display: none !important; }
+      .page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+        clear: both;
+      }
+      .diff-card {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        padding: 10px 14px !important;
+        margin-bottom: 8px !important;
+        border-radius: 10px !important;
+      }
+      .diff-line {
+        font-size: 12px !important;
+        margin-bottom: 4px !important;
+      }
+      .tip-box {
+        font-size: 11px !important;
+        padding: 5px 10px !important;
+        margin-top: 4px !important;
+      }
+      .diff-list {
+        gap: 8px !important;
+        margin-bottom: 20px !important;
+      }
+      .praise-box {
+        padding: 14px !important;
+        margin-bottom: 18px !important;
+      }
+      .score-grid {
+        gap: 8px !important;
+        margin-bottom: 18px !important;
+      }
+      .score-card {
+        padding: 10px !important;
+      }
     }
   </style>
 </head>

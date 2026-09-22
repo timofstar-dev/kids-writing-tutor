@@ -267,6 +267,8 @@ export default function App() {
               feedback={feedback}
               selectedGrade={selectedGrade}
               originalText={essayText}
+              studentName={studentName}
+              essayTitle={essayTitle}
               onOpenRulesModal={() => setIsRulesModalOpen(true)}
             />
           </section>

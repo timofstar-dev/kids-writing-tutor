@@ -59,9 +59,15 @@
 
 /* Print worksheet styles */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 10mm 12mm;
+  }
   body {
     background: white !important;
-    color: black !important;
+    color: #0f172a !important;
+    font-size: 10pt;
+    line-height: 1.35;
   }
   .no-print {
     display: none !important;
@@ -69,7 +75,15 @@
   .print-only {
     display: block !important;
   }
+  .print-page-break,
   .page-break {
-    page-break-before: always;
+    break-before: page !important;
+    page-break-before: always !important;
+    clear: both;
+  }
+  .print-avoid-break,
+  .avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 }

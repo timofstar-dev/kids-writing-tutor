@@ -23,6 +23,8 @@ export default function FeedbackPanel({
   feedback, 
   selectedGrade,
   originalText,
+  studentName = '',
+  essayTitle = '',
   onOpenRulesModal 
 }) {
   const [activeViewTab, setActiveViewTab] = useState('diff'); // 'diff' | 'wongoji' | 'clean' | 'print'
@@ -112,8 +114,8 @@ export default function FeedbackPanel({
   return (
     <div className="space-y-6">
       
-      {/* 1. 상단 칭찬 도장 & 다정한 총평 배너 */}
-      <div className="bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+      {/* 1. 상단 칭찬 도장 & 다정한 총평 배너 (화면 전용) */}
+      <div className="bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden no-print">
         <div className="absolute -right-6 -bottom-6 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
         <div className="absolute right-12 top-6 text-7xl opacity-20 pointer-events-none select-none">
           🌸
@@ -159,8 +161,8 @@ export default function FeedbackPanel({
         </div>
       </div>
 
-      {/* 2. 7대 핵심 기준 정밀 진단표 */}
-      <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+      {/* 2. 7대 핵심 기준 정밀 진단표 (화면 전용) */}
+      <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 no-print">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-amber-500" />
@@ -229,10 +231,10 @@ export default function FeedbackPanel({
       </div>
 
       {/* 3. 뷰 모드 탭 (문장별 1:1 대조 / 완성본 줄글 / 200자 원고지) */}
-      <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+      <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 print:p-0 print:border-none print:shadow-none print:bg-transparent">
         
-        {/* 상단 탭 전환 바 */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-5">
+        {/* 상단 탭 전환 바 (화면 전용) */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-5 no-print">
           <div className="flex bg-slate-100 p-1 rounded-2xl">
             <button
               onClick={() => setActiveViewTab('diff')}
@@ -293,10 +295,28 @@ export default function FeedbackPanel({
 
         {/* 탭 1: 문장별 1:1 첨삭 대조표 */}
         {activeViewTab === 'diff' && (
-          <div className="space-y-4">
+          <div className="space-y-4 print:space-y-0">
             
-            {/* 카테고리 필터 태그 */}
-            <div className="flex items-center gap-1.5 flex-wrap text-xs pb-1">
+            {/* 인쇄 전용 1페이지 헤더 */}
+            <div className="hidden print:block border-b-2 border-slate-800 pb-2 mb-3">
+              <div className="flex justify-between items-end">
+                <div>
+                  <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
+                    아이글쌤 7대 글쓰기 클리닉
+                  </span>
+                  <h1 className="text-lg font-black text-slate-900 mt-1">
+                    문장별 1:1 첨삭 대조표 {essayTitle ? `· 『${essayTitle}』` : ''}
+                  </h1>
+                </div>
+                <div className="text-right text-[11px] text-slate-600 leading-tight space-y-0.5">
+                  <p><strong>학생:</strong> {studentName || '학생'} ({selectedGrade})</p>
+                  <p><strong>일시:</strong> {new Date().toLocaleDateString('ko-KR')}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* 카테고리 필터 태그 (화면 전용) */}
+            <div className="flex items-center gap-1.5 flex-wrap text-xs pb-1 no-print">
               <span className="text-slate-400 font-medium text-[11px]">항목별 모아보기:</span>
               {categoriesList.map(cat => (
                 <button
@@ -318,47 +338,47 @@ export default function FeedbackPanel({
                 선택한 항목의 교정 문장이 없습니다.
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 print:space-y-2">
                 {filteredCorrections.map((item, idx) => (
                   <div 
                     key={idx} 
-                    className="p-5 rounded-2xl border-2 border-slate-200 bg-slate-50/50 hover:bg-white hover:border-amber-300 shadow-xs transition-all space-y-3"
+                    className="p-4 sm:p-5 print:p-2.5 print:my-1.5 print:space-y-1.5 print:rounded-xl print:border print:border-slate-300 print:shadow-none print:bg-white print-avoid-break break-inside-avoid rounded-2xl border-2 border-slate-200 bg-slate-50/50 hover:bg-white hover:border-amber-300 shadow-xs transition-all space-y-3"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1 text-xs font-black bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-lg border border-amber-300/70">
-                        <Bookmark className="w-3 h-3 text-amber-600" />
+                      <span className="inline-flex items-center gap-1 text-xs print:text-[10px] font-black bg-amber-100 text-amber-800 px-2.5 py-0.5 print:px-1.5 print:py-0.2 rounded-lg border border-amber-300/70">
+                        <Bookmark className="w-3 h-3 text-amber-600 print:w-2.5 print:h-2.5" />
                         {item.category || '문장 다듬기'}
                       </span>
-                      <span className="text-[11px] text-slate-400 font-medium">
+                      <span className="text-[11px] print:text-[10px] text-slate-400 font-medium">
                         문장 #{idx + 1}
                       </span>
                     </div>
 
                     {/* 원래 문장 */}
-                    <div className="flex items-start gap-2 text-xs sm:text-sm bg-rose-50/70 border border-rose-200/80 p-3 rounded-xl">
-                      <span className="shrink-0 bg-rose-200 text-rose-800 font-bold px-1.5 py-0.5 rounded text-[11px]">
+                    <div className="flex items-start gap-2 text-xs sm:text-sm print:text-[11px] bg-rose-50/70 border border-rose-200/80 p-2.5 sm:p-3 print:p-1.5 rounded-xl print:rounded-lg">
+                      <span className="shrink-0 bg-rose-200 text-rose-800 font-bold px-1.5 py-0.5 rounded text-[11px] print:text-[10px] print:py-0">
                         원래 글 ❌
                       </span>
-                      <p className="text-slate-700 leading-relaxed font-medium">
+                      <p className="text-slate-700 leading-relaxed print:leading-snug font-medium break-keep">
                         {item.original}
                       </p>
                     </div>
 
                     {/* 다듬은 문장 */}
-                    <div className="flex items-start gap-2 text-xs sm:text-sm bg-emerald-50/80 border border-emerald-200/80 p-3 rounded-xl">
-                      <span className="shrink-0 bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded text-[11px]">
+                    <div className="flex items-start gap-2 text-xs sm:text-sm print:text-[11px] bg-emerald-50/80 border border-emerald-200/80 p-2.5 sm:p-3 print:p-1.5 rounded-xl print:rounded-lg">
+                      <span className="shrink-0 bg-emerald-200 text-emerald-800 font-bold px-1.5 py-0.5 rounded text-[11px] print:text-[10px] print:py-0">
                         고친 글 ⭕
                       </span>
-                      <p className="text-slate-900 leading-relaxed font-bold">
+                      <p className="text-slate-900 leading-relaxed print:leading-snug font-bold break-keep">
                         {item.corrected}
                       </p>
                     </div>
 
                     {/* 선생님의 친절한 설명 말풍선 */}
                     {item.teacherTip && (
-                      <div className="bg-amber-50/80 border-l-4 border-amber-400 p-3 rounded-r-xl text-xs text-amber-950 flex items-start gap-2 leading-relaxed">
-                        <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                        <div>
+                      <div className="bg-amber-50/80 border-l-4 border-amber-400 p-2.5 sm:p-3 print:p-1.5 rounded-r-xl print:rounded-r-lg text-xs print:text-[10.5px] text-amber-950 flex items-start gap-2 leading-relaxed print:leading-snug">
+                        <Lightbulb className="w-4 h-4 print:w-3.5 print:h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                        <div className="break-keep">
                           <strong className="text-amber-800">아이글쌤의 다정한 조언:</strong> {item.teacherTip}
                         </div>
                       </div>
@@ -396,50 +416,91 @@ export default function FeedbackPanel({
 
       </div>
 
-      {/* 4. A4 인쇄용 전용 템플릿 (인쇄 시에만 깔끔하게 출력됨) */}
-      <div className="hidden print:block p-8 bg-white text-slate-900">
-        <div className="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-end">
+      {/* 4. A4 인쇄용 전용 템플릿: 완성 첨삭 학습지 (항상 새로운 페이지로 깔끔하게 시작) */}
+      <div className="hidden print:block print-page-break break-before-page p-6 bg-white text-slate-900">
+        
+        {/* 상단 헤더 */}
+        <div className="border-b-2 border-slate-900 pb-3 mb-4 flex justify-between items-end">
           <div>
-            <h1 className="text-2xl font-black">[아이글쌤] 초등 글쓰기 완성 첨삭 학습지</h1>
-            <p className="text-xs text-slate-600 mt-1">7대 핵심 기준 첨삭 진단 리포트 & 완성본</p>
+            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
+              초등 국어 7대 역량 진단 리포트 & 완성본
+            </span>
+            <h1 className="text-xl font-black mt-1 text-slate-900">
+              [아이글쌤] 초등 글쓰기 완성 첨삭 학습지
+            </h1>
+            <p className="text-[11px] text-slate-600 mt-0.5">
+              글 제목: {essayTitle ? `『${essayTitle}』` : '제목 없음'}
+            </p>
           </div>
-          <div className="text-right text-xs">
-            <p>학년: {selectedGrade}</p>
-            <p>날짜: {new Date().toLocaleDateString('ko-KR')}</p>
+          <div className="text-right text-[11px] text-slate-600 leading-tight space-y-0.5">
+            <p><strong>학생:</strong> {studentName || '학생'} ({selectedGrade})</p>
+            <p><strong>발행일:</strong> {new Date().toLocaleDateString('ko-KR')}</p>
           </div>
         </div>
 
         {/* 총평 & 스탬프 */}
-        <div className="border border-slate-300 p-4 rounded-xl mb-6 flex justify-between items-center bg-slate-50">
-          <div>
-            <h2 className="font-bold text-sm text-slate-800 mb-1">선생님 총평</h2>
-            <p className="text-xs leading-relaxed text-slate-700">{overallPraise}</p>
-            <p className="text-xs mt-2 font-bold text-amber-800">핵심 조언: {keyAdvice}</p>
+        <div className="border border-slate-300 p-3.5 rounded-xl mb-3 flex justify-between items-center bg-amber-50/40">
+          <div className="space-y-1.5 flex-1 pr-4">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-900">🌸 글쌤의 다정한 총평</span>
+            </div>
+            <p className="text-[11.5px] leading-relaxed text-slate-700 font-medium break-keep">
+              {overallPraise}
+            </p>
+            {keyAdvice && (
+              <p className="text-[11px] leading-snug font-bold text-amber-900 bg-amber-100/70 p-2 rounded-lg border border-amber-200 break-keep">
+                💡 <strong>핵심 조언:</strong> {keyAdvice}
+              </p>
+            )}
           </div>
-          <div className="border-2 border-dashed border-red-500 p-3 rounded-full text-center text-red-600 text-xs font-bold w-20 h-20 flex flex-col justify-center items-center shrink-0 ml-4">
-            <span>참잘했어요</span>
-            <span className="text-[10px]">{stamp}</span>
-          </div>
-        </div>
-
-        {/* 문장별 대조표 */}
-        <div className="mb-6">
-          <h2 className="font-bold text-sm text-slate-900 border-b border-slate-400 pb-1 mb-3">문장별 주요 첨삭 내용</h2>
-          <div className="space-y-2.5">
-            {sentenceCorrections.map((c, i) => (
-              <div key={i} className="text-xs border-b border-slate-200 pb-2">
-                <p className="text-slate-500 line-through">원래: {c.original}</p>
-                <p className="font-bold text-slate-900 mt-0.5">교정: {c.corrected}</p>
-                <p className="text-slate-600 italic mt-0.5">이유: {c.teacherTip}</p>
-              </div>
-            ))}
+          <div className="border-2 border-dashed border-red-500 p-2 rounded-full text-center text-red-600 text-xs font-bold w-20 h-20 flex flex-col justify-center items-center shrink-0 bg-white shadow-xs">
+            <span className="text-xs font-black">참잘했어요</span>
+            <span className="text-[10px] text-red-500">{stamp}</span>
           </div>
         </div>
 
-        {/* 최종 완성본 */}
-        <div className="page-break">
-          <h2 className="font-bold text-sm text-slate-900 border-b border-slate-400 pb-1 mb-3">완성된 모범 글</h2>
-          <div className="p-4 border border-slate-300 rounded-xl bg-slate-50 text-xs leading-relaxed whitespace-pre-line">
+        {/* 7대 핵심 기준 성취도 진단 종합 요약표 */}
+        <div className="mb-3">
+          <h2 className="font-bold text-xs text-slate-800 mb-1.5 flex items-center gap-1">
+            <span>📊 7대 핵심 기준 진단 종합</span>
+          </h2>
+          <div className="grid grid-cols-4 gap-1.5 text-[10.5px]">
+            {CRITERIA_MAP.map(item => {
+              const result = score7[item.key] || { status: '좋아요' };
+              const isGood = result.status === '좋아요';
+              const isCaution = result.status === '주의';
+              return (
+                <div key={item.key} className="border border-slate-200 rounded-lg p-1.5 bg-slate-50 flex items-center justify-between">
+                  <span className="font-bold text-slate-700 truncate mr-1">{item.name}</span>
+                  <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-black shrink-0 ${
+                    isGood ? 'bg-emerald-600 text-white' : isCaution ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'
+                  }`}>
+                    {result.status}
+                  </span>
+                </div>
+              );
+            })}
+            <div className="border border-slate-200 rounded-lg p-1.5 bg-slate-50 flex items-center justify-between">
+              <span className="font-bold text-slate-700">총 교정 문장</span>
+              <span className="px-1.5 py-0.2 rounded text-[9.5px] font-black bg-slate-700 text-white shrink-0">
+                {sentenceCorrections.length}문장 완료
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 완성된 모범 글 (학습지와 동일한 페이지에 깔끔하게 출력) */}
+        <div className="border border-slate-300 rounded-xl p-4 bg-slate-50/60">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-2.5">
+            <h2 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+              <span>✨ 완성된 모범 글</span>
+              <span className="text-[10px] text-slate-500 font-normal">(7대 기준으로 매끄럽게 완성된 글)</span>
+            </h2>
+            <span className="text-[10.5px] text-slate-500">
+              공백 포함 {finalPolishedEssay.length}자
+            </span>
+          </div>
+          <div className="text-[12px] text-slate-800 leading-relaxed font-medium whitespace-pre-line break-keep">
             {finalPolishedEssay}
           </div>
         </div>
