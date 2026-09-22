@@ -2,6 +2,8 @@
  * 첨삭 기록을 새 창(새 탭)에서 바로 열람하고 인쇄할 수 있는 독립 HTML 문서 생성기
  */
 
+import { generateFullProofreadTokens } from './proofreadingEngine';
+
 export function openRecordInNewWindow(item) {
   const newWin = window.open('', '_blank');
   if (!newWin) {
@@ -15,6 +17,35 @@ export function openRecordInNewWindow(item) {
   const score7 = feedback.score7 || {};
   const corrections = feedback.sentenceCorrections || [];
   const stamp = feedback.stamp || '참 잘했어요';
+
+  // 원글 교정 부호 토큰 및 HTML 생성
+  const tokenLines = generateFullProofreadTokens(item.essayText || '', corrections);
+  let proofreadTokensHtml = '';
+  for (let lineIdx = 0; lineIdx < tokenLines.length; lineIdx++) {
+    const line = tokenLines[lineIdx];
+    let lineHtml = '';
+    for (let tokIdx = 0; tokIdx < line.length; tokIdx++) {
+      const tok = line[tokIdx];
+      if (tok.type === 'newline') {
+        lineHtml += '<div style="height:12px;width:100%;"></div>';
+      } else if (tok.type === 'text') {
+        lineHtml += `<span>${tok.text}</span>`;
+      } else if (tok.type === 'space_insert') {
+        lineHtml += `<span style="display:inline-block;vertical-align:baseline;margin:0 2px;"><span style="display:inline-flex;padding:1px 4px;border-radius:4px;font-weight:900;color:#e11d48;background:#ffe4e6;border:1px solid #fda4af;font-size:11px;line-height:1;">∨</span></span>`;
+      } else if (tok.type === 'space_delete') {
+        lineHtml += `<span style="display:inline-block;vertical-align:baseline;margin:0 2px;"><span style="display:inline-flex;padding:1px 4px;border-radius:4px;font-weight:900;color:#e11d48;background:#ffe4e6;border:1px solid #fda4af;font-size:11px;line-height:1;">⌒</span></span>`;
+      } else if (tok.type === 'replace_char') {
+        lineHtml += `<span style="position:relative;display:inline-block;vertical-align:baseline;margin:0 2px;"><span style="position:absolute;bottom:100%;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:900;color:#e11d48;background:#ffffff;border:1px solid #fda4af;padding:1px 3px;border-radius:4px;margin-bottom:2px;line-height:1;">${tok.replacement}⚬</span><span style="display:inline-block;padding:0 3px;border:1.5px solid #e11d48;border-radius:9999px;font-weight:bold;background:rgba(255,228,230,0.4);">${tok.original}</span></span>`;
+      } else if (tok.type === 'replace_word') {
+        lineHtml += `<span style="position:relative;display:inline-block;vertical-align:baseline;margin:0 3px;"><span style="position:absolute;bottom:100%;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:900;color:#e11d48;background:#ffffff;border:1px solid #fda4af;padding:1px 3px;border-radius:4px;margin-bottom:2px;line-height:1;">${tok.replacement}</span><span style="display:inline-block;padding:0 3px;border-bottom:2px solid #e11d48;border-left:2px solid #e11d48;border-right:2px solid #e11d48;font-weight:bold;background:rgba(255,228,230,0.3);">${tok.original}</span></span>`;
+      } else if (tok.type === 'insert_word') {
+        lineHtml += `<span style="position:relative;display:inline-block;vertical-align:baseline;margin:0 3px;"><span style="position:absolute;bottom:100%;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:900;color:#e11d48;background:#ffffff;border:1px solid #fda4af;padding:1px 3px;border-radius:4px;margin-bottom:2px;line-height:1;">${tok.replacement}</span><span style="color:#e11d48;font-weight:900;font-size:11px;">∨</span></span>`;
+      } else if (tok.type === 'delete_word') {
+        lineHtml += `<span style="text-decoration:line-through;color:#fda4af;text-decoration-color:#e11d48;margin:0 2px;">${tok.original}</span>`;
+      }
+    }
+    proofreadTokensHtml += `<div style="min-height:2.8rem;padding:4px 0;display:flex;flex-wrap:wrap;align-items:baseline;">${lineHtml}</div>`;
+  }
 
   // 200자 원고지 셀 생성
   const polishedText = feedback.finalPolishedEssay || item.essayText || '';
@@ -386,6 +417,15 @@ export function openRecordInNewWindow(item) {
             </div>
           `;
         }).join('')}
+      </div>
+
+      <!-- 원글 교정 부호(수정 기호) 첨삭본 -->
+      <h2 class="section-title">✏️ 원글 교정 부호(수정 기호) 첨삭본</h2>
+      <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;padding:18px;margin-bottom:30px;line-height:2.8rem;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.02);break-inside:avoid;page-break-inside:avoid;">
+        <div style="font-size:11.5px;color:#e11d48;font-weight:bold;margin-bottom:10px;border-bottom:1px solid #f1f5f9;padding-bottom:6px;">
+          * 국어 표준 교정 기호: ∨ 띄어 쓸 때 · ⌒ 붙여 쓸 때 · ⚬ 한 글자 고침 · └─┘ 여러 글자 고침 · ∨ 끼워 넣음
+        </div>
+        ${proofreadTokensHtml}
       </div>
 
       <!-- 문장별 1:1 대조 첨삭 -->

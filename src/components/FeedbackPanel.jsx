@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Sparkles, 
   Award, 
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import ProofreadTextViewer from './ProofreadTextViewer';
+import { generateFullProofreadTokens } from '../services/proofreadingEngine';
 
 export default function FeedbackPanel({ 
   feedback, 
@@ -80,6 +81,104 @@ export default function FeedbackPanel({
     if (selectedCategoryFilter === '전체') return true;
     return item.category === selectedCategoryFilter;
   });
+
+  // 인쇄용 원글 교정 부호 토큰 계산
+  const proofreadTokens = useMemo(() => {
+    return generateFullProofreadTokens(originalText, sentenceCorrections);
+  }, [originalText, sentenceCorrections]);
+
+  // 인쇄 전용 교정 부호 토큰 렌더러
+  const renderPrintToken = (tok, lineIdx, tokIdx) => {
+    const key = `print-tok-${lineIdx}-${tokIdx}`;
+
+    if (tok.type === 'newline') {
+      return <div key={key} className="h-3 w-full" />;
+    }
+
+    if (tok.type === 'text') {
+      return (
+        <span key={key} className="text-slate-900 tracking-wide font-medium">
+          {tok.text}
+        </span>
+      );
+    }
+
+    // 1. 띄어 쓸 때 (∨ 쐐기표)
+    if (tok.type === 'space_insert') {
+      return (
+        <span key={key} className="inline-block align-baseline mx-0.5 select-none">
+          <span className="inline-flex items-center justify-center px-1 py-0.2 rounded font-black text-rose-600 bg-rose-50 border border-rose-400 text-[10px] leading-none">
+            ∨
+          </span>
+        </span>
+      );
+    }
+
+    // 2. 붙여 쓸 때 (⌒ 호선표)
+    if (tok.type === 'space_delete') {
+      return (
+        <span key={key} className="inline-block align-baseline mx-0.5 select-none">
+          <span className="inline-flex items-center justify-center px-1 py-0.2 rounded font-black text-rose-600 bg-rose-50 border border-rose-400 text-[10px] leading-none">
+            ⌒
+          </span>
+        </span>
+      );
+    }
+
+    // 3. 한 글자 고칠 때 (⚬ 동그라미 + 상단 바른 글자)
+    if (tok.type === 'replace_char') {
+      return (
+        <span key={key} className="relative inline-block align-baseline mx-0.5">
+          <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-black text-rose-600 leading-none px-1 py-0.2 rounded bg-white border border-rose-400 z-10 flex items-center gap-0.5 shadow-2xs">
+            <span>{tok.replacement}</span>
+            <span className="text-[7.5px] text-rose-400">⚬</span>
+          </span>
+          <span className="inline-block px-1 border border-rose-500 rounded-full font-bold text-slate-900 bg-rose-50/40">
+            {tok.original}
+          </span>
+        </span>
+      );
+    }
+
+    // 4. 여러 글자 고칠 때 (└─┘ 꺾은 밑줄 + 상단 바른 단어)
+    if (tok.type === 'replace_word') {
+      return (
+        <span key={key} className="relative inline-block align-baseline mx-1">
+          <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-black text-rose-600 leading-none px-1 py-0.2 rounded bg-white border border-rose-400 z-10 shadow-2xs">
+            {tok.replacement}
+          </span>
+          <span className="inline-block px-0.5 border-b-2 border-l-2 border-r-2 border-rose-500 font-bold text-slate-900 bg-rose-50/30">
+            {tok.original}
+          </span>
+        </span>
+      );
+    }
+
+    // 5. 글자를 끼워 넣을 때 (∨ + 상단 단어)
+    if (tok.type === 'insert_word') {
+      return (
+        <span key={key} className="relative inline-block align-baseline mx-1">
+          <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-black text-rose-600 leading-none px-1 py-0.2 rounded bg-white border border-rose-400 z-10 shadow-2xs">
+            {tok.replacement}
+          </span>
+          <span className="inline-flex items-center justify-center px-0.5 text-rose-600 font-black text-[9px]">
+            ∨
+          </span>
+        </span>
+      );
+    }
+
+    // 6. 삭제 (✕)
+    if (tok.type === 'delete_word') {
+      return (
+        <span key={key} className="relative inline-block align-baseline mx-0.5 line-through decoration-rose-500 decoration-2 text-rose-400 font-medium">
+          {tok.original}
+        </span>
+      );
+    }
+
+    return null;
+  };
 
   // 200자 원고지 칸 배열 변환 (20자 1줄 기준)
   const renderWongojiGrid = () => {
@@ -491,6 +590,27 @@ export default function FeedbackPanel({
                   {sentenceCorrections.length}문장 완료
                 </span>
               </div>
+            </div>
+          </div>
+
+          {/* [신규] 원글 교정 부호(수정 기호) 첨삭본 (인쇄 영역) */}
+          <div className="border border-slate-300 rounded-xl p-2.5 bg-white mb-2.5 print-avoid-break break-inside-avoid shadow-2xs">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-1 mb-1.5">
+              <h2 className="font-bold text-xs text-slate-900 flex items-center gap-1">
+                <span>✏️ 원글 교정 부호(수정 기호) 첨삭본</span>
+                <span className="text-[10px] text-slate-500 font-normal">(학생 원본 글에 직접 표시된 교정 기호)</span>
+              </h2>
+              <span className="text-[9.5px] text-rose-700 font-bold">
+                * ∨ 띄어 쓸 때 · ⌒ 붙여 쓸 때 · ⚬ 한 글자 고침 · └─┘ 여러 글자 고침 · ∨ 끼워 넣음
+              </span>
+            </div>
+
+            <div className="rounded-lg p-2.5 bg-slate-50/60 border border-slate-200 text-[11px] leading-[2.5rem] font-medium select-text break-keep">
+              {proofreadTokens.map((lineTokens, lineIdx) => (
+                <div key={`print-line-${lineIdx}`} className="min-h-[2.5rem] py-0.5 flex flex-wrap items-baseline">
+                  {lineTokens.map((tok, tokIdx) => renderPrintToken(tok, lineIdx, tokIdx))}
+                </div>
+              ))}
             </div>
           </div>
 
