@@ -163,24 +163,32 @@ export default function App() {
   // 특정 기록 삭제
   const handleDeleteHistoryItem = async (id) => {
     try {
+      // 낙관적 UI 업데이트 (즉각 반영)
+      setHistoryList(prev => prev.filter(item => item.id !== id));
       await deleteHistoryItem(id);
       await loadHistoryList();
       if (currentHistoryId === id) {
         setCurrentHistoryId(null);
       }
+      return true;
     } catch (err) {
-      alert('삭제 중 오류가 발생했습니다: ' + err.message);
+      console.error('삭제 중 오류가 발생했습니다:', err);
+      await loadHistoryList();
+      throw err;
     }
   };
 
   // 모든 기록 초기화
   const handleClearAllHistory = async () => {
     try {
-      await clearAllHistory();
       setHistoryList([]);
+      await clearAllHistory();
       setCurrentHistoryId(null);
+      return true;
     } catch (err) {
-      alert('초기화 중 오류가 발생했습니다: ' + err.message);
+      console.error('초기화 중 오류가 발생했습니다:', err);
+      await loadHistoryList();
+      throw err;
     }
   };
 
