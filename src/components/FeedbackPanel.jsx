@@ -15,9 +15,11 @@ import {
   BookOpen,
   HelpCircle,
   TrendingUp,
-  Bookmark
+  Bookmark,
+  PenTool
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import ProofreadTextViewer from './ProofreadTextViewer';
 
 export default function FeedbackPanel({ 
   feedback, 
@@ -27,7 +29,7 @@ export default function FeedbackPanel({
   essayTitle = '',
   onOpenRulesModal 
 }) {
-  const [activeViewTab, setActiveViewTab] = useState('diff'); // 'diff' | 'wongoji' | 'clean' | 'print'
+  const [activeViewTab, setActiveViewTab] = useState('proofread'); // 'proofread' | 'diff' | 'wongoji' | 'clean' | 'print'
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('전체');
   const [copied, setCopied] = useState(false);
 
@@ -235,7 +237,19 @@ export default function FeedbackPanel({
         
         {/* 상단 탭 전환 바 (화면 전용) */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-5">
-          <div className="flex bg-slate-100 p-1 rounded-2xl">
+          <div className="flex flex-wrap bg-slate-100 p-1 rounded-2xl gap-1">
+            <button
+              onClick={() => setActiveViewTab('proofread')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                activeViewTab === 'proofread'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <PenTool className="w-4 h-4 text-rose-600" />
+              <span>원글 교정부호(수정기호) 첨삭</span>
+            </button>
+
             <button
               onClick={() => setActiveViewTab('diff')}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
@@ -292,6 +306,16 @@ export default function FeedbackPanel({
             </button>
           </div>
         </div>
+
+        {/* 탭 0: 원글 교정 부호(수정 기호) 첨삭 뷰어 */}
+        {activeViewTab === 'proofread' && (
+          <ProofreadTextViewer
+            originalText={originalText}
+            sentenceCorrections={sentenceCorrections}
+            essayTitle={essayTitle}
+            studentName={studentName}
+          />
+        )}
 
         {/* 탭 1: 문장별 1:1 첨삭 대조표 (화면용) */}
         {activeViewTab === 'diff' && (

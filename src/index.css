@@ -87,3 +87,59 @@
     page-break-inside: avoid !important;
   }
 }
+
+/* ========================================================
+   원고지 표준 교정 부호 (수정 기호) 시각화 스타일
+   ======================================================== */
+
+.proofread-paper-container {
+  background-color: #fdfbf7;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 4.05rem,
+    rgba(226, 232, 240, 0.85) 4.05rem,
+    rgba(226, 232, 240, 0.85) 4.15rem
+  );
+  line-height: 4.15rem;
+}
+
+/* 띄어 쓸 때 (∨) 쐐기표 */
+.proof-wedge-v {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #e11d48;
+  font-weight: 900;
+  vertical-align: baseline;
+  user-select: none;
+}
+
+/* 붙여 쓸 때 (⌒) 호선표 */
+.proof-arc-tie {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #e11d48;
+  font-weight: 900;
+  vertical-align: baseline;
+  user-select: none;
+}
+
+/* 펄스 애니메이션 (띄어쓰기 집중 모드 시) */
+@keyframes proof-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.5);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(225, 29, 72, 0.2);
+    transform: scale(1.15);
+  }
+}
+
+.proof-pulse-highlight {
+  animation: proof-pulse-glow 1.6s infinite ease-in-out;
+}
