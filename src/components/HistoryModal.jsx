@@ -27,10 +27,12 @@ export default function HistoryModal({
   onLoadItem,
   onDeleteItem,
   onClearAll,
-  onRefreshHistory
+  onRefreshHistory,
+  students = []
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('전체');
+  const [studentNameFilter, setStudentNameFilter] = useState('전체');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [isDeletingId, setIsDeletingId] = useState(null);
@@ -69,6 +71,7 @@ export default function HistoryModal({
   // 필터링된 기록
   const filteredList = historyList.filter(item => {
     const matchGrade = gradeFilter === '전체' || item.grade === gradeFilter;
+    const matchStudentName = studentNameFilter === '전체' || (item.studentName && item.studentName.trim() === studentNameFilter);
     const searchLower = searchTerm.toLowerCase();
     const matchSearch = 
       (item.title && item.title.toLowerCase().includes(searchLower)) ||
@@ -76,7 +79,7 @@ export default function HistoryModal({
       (item.essayText && item.essayText.toLowerCase().includes(searchLower)) ||
       (item.createdAt && item.createdAt.includes(searchTerm));
     
-    return matchGrade && matchSearch;
+    return matchGrade && matchStudentName && matchSearch;
   });
 
   return (
@@ -125,20 +128,35 @@ export default function HistoryModal({
             />
           </div>
 
-          <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
-            {['전체', '초등 1~2학년', '초등 3~4학년', '초등 5~6학년'].map(g => (
-              <button
-                key={g}
-                onClick={() => setGradeFilter(g)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  gradeFilter === g
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'bg-white text-slate-600 hover:bg-amber-100 border border-amber-200'
-                }`}
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            {students.length > 0 && (
+              <select
+                value={studentNameFilter}
+                onChange={(e) => setStudentNameFilter(e.target.value)}
+                className="px-3 py-1.5 bg-white border border-amber-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-amber-400 cursor-pointer"
               >
-                {g}
-              </button>
-            ))}
+                <option value="전체">모든 학생 기록</option>
+                {students.map(s => (
+                  <option key={s.id} value={s.name}>{s.name}</option>
+                ))}
+              </select>
+            )}
+            
+            <div className="flex flex-wrap gap-1.5">
+              {['전체', '초등 1~2학년', '초등 3~4학년', '초등 5~6학년'].map(g => (
+                <button
+                  key={g}
+                  onClick={() => setGradeFilter(g)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    gradeFilter === g
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'bg-white text-slate-600 hover:bg-amber-100 border border-amber-200'
+                  }`}
+                >
+                  {g === '전체' ? '모든 학년' : g}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

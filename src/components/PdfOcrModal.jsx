@@ -21,7 +21,8 @@ import {
   FileCheck2,
   RefreshCw,
   Layers,
-  FileDown
+  FileDown,
+  CheckSquare
 } from 'lucide-react';
 import { 
   renderAllPagesFromPdf, 
@@ -42,6 +43,7 @@ export default function PdfOcrModal({
 }) {
   const [pages, setPages] = useState([]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [selectedPages, setSelectedPages] = useState([]); // 선택된 페이지 번호 배열 e.g. [1, 2]
   const [fileName, setFileName] = useState('');
   const [zoomLevel, setZoomLevel] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -90,12 +92,13 @@ export default function PdfOcrModal({
     try {
       if (isPdf) {
         setProgressInfo({ current: 0, total: 0, percentage: 30, status: 'PDF 고해상도 페이지 렌더링 중...' });
-        const renderedPages = await renderAllPagesFromPdf(file, 10, 1.8);
+        const renderedPages = await renderAllPagesFromPdf(file, 15, 1.8);
         if (renderedPages.length === 0) {
           throw new Error('PDF에서 페이지를 읽을 수 없습니다.');
         }
         setPages(renderedPages);
         setCurrentPageIndex(0);
+        setSelectedPages(renderedPages.map(p => p.pageNum));
         setZoomLevel(1);
         setRotation(0);
       } else {
@@ -109,6 +112,7 @@ export default function PdfOcrModal({
             totalPages: 1
           }]);
           setCurrentPageIndex(0);
+          setSelectedPages([1]);
           setZoomLevel(1);
           setRotation(0);
         };
@@ -124,7 +128,24 @@ export default function PdfOcrModal({
     }
   };
 
-  // 전체 페이지 일괄 마크다운 변환 실행
+  // 페이지 선택 토글
+  const togglePageSelection = (pageNum) => {
+    setSelectedPages(prev => 
+      prev.includes(pageNum)
+        ? prev.filter(p => p !== pageNum)
+        : [...prev, pageNum].sort((a, b) => a - b)
+    );
+  };
+
+  const handleSelectAllPages = () => {
+    setSelectedPages(pages.map(p => p.pageNum));
+  };
+
+  const handleDeselectAllPages = () => {
+    setSelectedPages([]);
+  };
+
+  // 전체 페이지 일괄 마크다운 OCR 변환 실행
   const handleRunAllPagesOcr = async () => {
     if (!pages || pages.length === 0) {
       setErrorMessage('먼저 PDF 또는 이미지 파일을 등록해주세요.');
@@ -135,6 +156,8 @@ export default function PdfOcrModal({
       return;
     }
 
+    // 전체 페이지를 선택 상태로도 동기화
+    setSelectedPages(pages.map(p => p.pageNum));
     setIsProcessing(true);
     setErrorMessage('');
     setCopySuccessMsg('');
@@ -150,10 +173,54 @@ export default function PdfOcrModal({
 
       setMarkdownResult(fullMarkdown);
       setActiveEditorTab('gdocs_preview');
-      showToast('✨ 전체 페이지 마크다운 변환이 완료되었습니다!');
+      showToast(`✨ 전체 ${pages.length}개 페이지 OCR 변환이 완료되었습니다!`);
     } catch (err) {
       console.error(err);
-      setErrorMessage('마크다운 변환 중 오류: ' + err.message);
+      setErrorMessage('전체 페이지 마크다운 변환 중 오류: ' + err.message);
+    } finally {
+      setIsProcessing(false);
+      setProgressInfo({ current: 0, total: 0, percentage: 0, status: '' });
+    }
+  };
+
+  // 체크박스로 선택한 페이지만 OCR 변환 실행
+  const handleRunSelectedPagesOcr = async () => {
+    if (!pages || pages.length === 0) {
+      setErrorMessage('먼저 PDF 또는 이미지 파일을 등록해주세요.');
+      return;
+    }
+    if (selectedPages.length === 0) {
+      setErrorMessage('OCR을 적용할 페이지를 체크박스로 최소 1쪽 이상 선택해주세요.');
+      return;
+    }
+    if (!apiKey) {
+      setErrorMessage('Gemini API 키가 필요합니다. 상단 또는 아래 버튼을 눌러 API 키를 입력해주세요.');
+      return;
+    }
+
+    const pagesToRun = pages
+      .filter(p => selectedPages.includes(p.pageNum))
+      .sort((a, b) => a.pageNum - b.pageNum);
+
+    setIsProcessing(true);
+    setErrorMessage('');
+    setCopySuccessMsg('');
+
+    try {
+      const fullMarkdown = await extractMarkdownFromMultiplePages({
+        apiKey,
+        pages: pagesToRun,
+        mode: ocrMode,
+        modelName,
+        onProgress: (p) => setProgressInfo(p)
+      });
+
+      setMarkdownResult(fullMarkdown);
+      setActiveEditorTab('gdocs_preview');
+      showToast(`✨ 선택한 ${pagesToRun.length}개 페이지(제 ${pagesToRun.map(p => p.pageNum).join(', ')}쪽) OCR 변환이 완료되었습니다!`);
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('선택 페이지 마크다운 변환 중 오류: ' + err.message);
     } finally {
       setIsProcessing(false);
       setProgressInfo({ current: 0, total: 0, percentage: 0, status: '' });
@@ -565,51 +632,144 @@ export default function PdfOcrModal({
                   </span>
                 </div>
 
-                {/* 썸네일 스트립 (다중 페이지인 경우) */}
+                {/* 썸네일 스트립 및 페이지별 체크박스 선택 영역 */}
                 {pages.length > 1 && (
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
-                    {pages.map((p, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setCurrentPageIndex(idx)}
-                        className={`relative shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
-                          idx === currentPageIndex 
-                            ? 'border-indigo-400 ring-2 ring-indigo-400/40' 
-                            : 'border-slate-700 opacity-60 hover:opacity-100'
-                        }`}
-                        style={{ width: '44px', height: '58px' }}
-                      >
-                        <img src={p.dataUrl} alt={`p${idx+1}`} className="w-full h-full object-cover" />
-                        <span className="absolute bottom-0 right-0 bg-black/70 text-[10px] text-white px-1 font-mono">
-                          {idx + 1}
-                        </span>
-                      </button>
-                    ))}
+                  <div className="bg-slate-900/90 rounded-2xl p-2.5 border border-slate-700/80 space-y-2">
+                    <div className="flex items-center justify-between text-xs px-1">
+                      <span className="font-bold text-slate-200 flex items-center gap-1.5">
+                        <CheckSquare className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>OCR 적용 페이지 체크 ({selectedPages.length}/{pages.length}쪽 선택됨)</span>
+                      </span>
+                      <div className="flex items-center gap-2 text-[11px]">
+                        <button
+                          onClick={handleSelectAllPages}
+                          className="text-indigo-300 hover:text-white font-bold hover:underline transition-colors cursor-pointer"
+                        >
+                          전체 선택
+                        </button>
+                        <span className="text-slate-600">|</span>
+                        <button
+                          onClick={handleDeselectAllPages}
+                          className="text-slate-400 hover:text-white font-medium hover:underline transition-colors cursor-pointer"
+                        >
+                          전체 해제
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                      {pages.map((p, idx) => {
+                        const isChecked = selectedPages.includes(p.pageNum);
+                        const isCurrent = idx === currentPageIndex;
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => setCurrentPageIndex(idx)}
+                            className={`relative shrink-0 rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
+                              isCurrent 
+                                ? 'border-indigo-400 ring-2 ring-indigo-400/50 shadow-md' 
+                                : isChecked 
+                                ? 'border-indigo-500/80' 
+                                : 'border-slate-700 opacity-60 hover:opacity-100'
+                            }`}
+                            style={{ width: '56px', height: '74px' }}
+                            title={`클릭하여 ${p.pageNum}쪽 미리보기`}
+                          >
+                            <img src={p.dataUrl} alt={`p${p.pageNum}`} className="w-full h-full object-cover" />
+                            
+                            {/* 체크박스 오버레이 */}
+                            <div 
+                              className="absolute top-1 left-1 bg-black/75 rounded-md p-0.5 shadow-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                togglePageSelection(p.pageNum);
+                              }}
+                              title={isChecked ? `${p.pageNum}쪽 선택 해제` : `${p.pageNum}쪽 OCR 선택`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {}} // 부모 div 클릭에서 처리
+                                className="w-3.5 h-3.5 accent-indigo-500 rounded cursor-pointer block"
+                              />
+                            </div>
+
+                            {/* 쪽 번호 배지 */}
+                            <span className={`absolute bottom-0 right-0 text-[10px] px-1.5 py-0.5 font-mono font-bold rounded-tl-md ${
+                              isChecked ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300'
+                            }`}>
+                              {p.pageNum}쪽
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 
-                {/* OCR 실행 버튼들 */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                  <button
-                    onClick={handleRunAllPagesOcr}
-                    disabled={isProcessing}
-                    className="w-full py-2.5 px-3 bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-600 hover:from-indigo-600 hover:to-pink-700 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all"
-                  >
-                    {isProcessing ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                    )}
-                    <span>전체 {pages.length}쪽 일괄 마크다운 변환</span>
-                  </button>
+                {/* 현재 보고 있는 페이지 체크 토글 바 */}
+                {currentPage && pages.length > 1 && (
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900/60 rounded-xl border border-slate-700/60 text-xs">
+                    <label className="flex items-center gap-2 cursor-pointer text-slate-200 hover:text-white">
+                      <input
+                        type="checkbox"
+                        checked={selectedPages.includes(currentPage.pageNum)}
+                        onChange={() => togglePageSelection(currentPage.pageNum)}
+                        className="w-4 h-4 accent-indigo-500 rounded cursor-pointer"
+                      />
+                      <span className="font-semibold">
+                        현재 보고 있는 <strong className="text-indigo-300">{currentPage.pageNum}쪽</strong>을 OCR 변환 대상에 포함
+                      </span>
+                    </label>
+                    <span className="text-[11px] font-bold">
+                      {selectedPages.includes(currentPage.pageNum) ? (
+                        <span className="text-emerald-400">✅ 포함됨</span>
+                      ) : (
+                        <span className="text-slate-400">⚪ 제외됨</span>
+                      )}
+                    </span>
+                  </div>
+                )}
 
-                  <button
-                    onClick={handleRunCurrentPageOcr}
-                    disabled={isProcessing}
-                    className="w-full py-2.5 px-3 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-200 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"
-                  >
-                    <span>현재 {currentPageIndex + 1}쪽만 변환</span>
-                  </button>
+                {/* OCR 실행 버튼들: 전체 페이지 OCR vs 선택 페이지 OCR */}
+                <div className="space-y-2 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {/* 전체 페이지 OCR 적용 버튼 */}
+                    <button
+                      onClick={handleRunAllPagesOcr}
+                      disabled={isProcessing}
+                      className="w-full py-2.5 px-3 bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-600 hover:from-indigo-600 hover:to-pink-700 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      title="1쪽부터 끝까지 모든 페이지를 순서대로 판독하여 하나로 합칩니다"
+                    >
+                      {isProcessing ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                      )}
+                      <span>전체 페이지 OCR 적용 (총 {pages.length}쪽)</span>
+                    </button>
+
+                    {/* 선택한 페이지 OCR 적용 버튼 */}
+                    <button
+                      onClick={handleRunSelectedPagesOcr}
+                      disabled={isProcessing || selectedPages.length === 0}
+                      className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      title="체크박스로 선택한 페이지만 순서대로 판독하여 하나로 합칩니다"
+                    >
+                      <CheckSquare className="w-3.5 h-3.5 text-emerald-200" />
+                      <span>선택한 페이지 OCR 적용 ({selectedPages.length}쪽)</span>
+                    </button>
+                  </div>
+
+                  {pages.length > 1 && (
+                    <button
+                      onClick={handleRunCurrentPageOcr}
+                      disabled={isProcessing}
+                      className="w-full py-1.5 px-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 hover:text-white font-medium text-[11px] rounded-lg transition-all flex items-center justify-center gap-1 border border-slate-700 cursor-pointer"
+                    >
+                      <span>현재 보고 있는 {currentPageIndex + 1}쪽만 단독 변환하여 덧붙이기</span>
+                    </button>
+                  )}
                 </div>
 
               </div>

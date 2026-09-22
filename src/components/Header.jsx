@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Key, Sparkles, Printer, GraduationCap, FolderOpen, FileCheck2 } from 'lucide-react';
+import { BookOpen, Key, Sparkles, Printer, GraduationCap, FolderOpen, FileCheck2, User } from 'lucide-react';
 
 export default function Header({ 
   selectedGrade, 
@@ -8,6 +8,7 @@ export default function Header({
   onOpenApiModal, 
   onOpenHistoryModal,
   onOpenPdfOcrModal,
+  onOpenStudentModal,
   historyCount = 0,
   apiKey,
   hasFeedback,
@@ -91,6 +92,16 @@ export default function Header({
             <FileCheck2 className="w-3.5 h-3.5 text-purple-200 group-hover:scale-110 transition-transform" />
             <span>PDF OCR 변환</span>
             <Sparkles className="w-3 h-3 text-yellow-300 animate-pulse" />
+          </button>
+
+          {/* 학생 명단 관리 버튼 */}
+          <button
+            onClick={onOpenStudentModal}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-800 border border-slate-200 hover:border-indigo-300 font-bold text-xs rounded-xl shadow-xs transition-all whitespace-nowrap shrink-0"
+            title="첨삭할 학생 명단 미리 등록 및 관리"
+          >
+            <User className="w-3.5 h-3.5 text-indigo-500" />
+            <span>학생 관리</span>
           </button>
 
           {/* 기록 보관함 버튼 */}

@@ -15,10 +15,12 @@ import {
   Wand2,
   Trash2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CheckSquare
 } from 'lucide-react';
 import { SAMPLE_ESSAYS } from '../data/sampleEssays';
 import { renderPdfToImage } from '../services/pdfHelper';
+import { renderAllPagesFromPdf } from '../services/pdfOcrService';
 import { extractTextFromImage } from '../services/aiService';
 
 export default function InputPanel({
@@ -33,12 +35,16 @@ export default function InputPanel({
   selectedGrade,
   apiKey,
   modelName,
-  onOpenPdfOcrModal
+  onOpenPdfOcrModal,
+  students = [],
+  onOpenStudentModal
 }) {
   const [activeTab, setActiveTab] = useState('text'); // 'text' | 'scan'
   const [uploadedFile, setUploadedFile] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [pdfInfo, setPdfInfo] = useState({ currentPage: 1, totalPages: 1 });
+  const [pdfPages, setPdfPages] = useState([]); // [{ pageNum, dataUrl, totalPages }]
+  const [selectedPages, setSelectedPages] = useState([]); // [1, 2]
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isExtractingOcr, setIsExtractingOcr] = useState(false);
   const [ocrStatusMessage, setOcrStatusMessage] = useState('');
@@ -92,17 +98,25 @@ export default function InputPanel({
 
     try {
       if (isPdf) {
-        setOcrStatusMessage('PDF 1페이지를 고해상도로 렌더링 중...');
-        const result = await renderPdfToImage(file, 1);
-        setPreviewImage(result.dataUrl);
-        setPdfInfo({ currentPage: 1, totalPages: result.numPages });
-        setOcrStatusMessage('PDF 렌더링 완료. 글씨를 보며 타이핑하거나 [AI 손글씨 인식]을 눌러보세요.');
+        setOcrStatusMessage('PDF 모든 페이지를 고해상도로 렌더링 중...');
+        const allPages = await renderAllPagesFromPdf(file, 15, 1.8);
+        if (allPages.length === 0) {
+          throw new Error('PDF에서 페이지를 읽을 수 없습니다.');
+        }
+        setPdfPages(allPages);
+        setPreviewImage(allPages[0]?.dataUrl);
+        setPdfInfo({ currentPage: 1, totalPages: allPages.length });
+        setSelectedPages(allPages.map(p => p.pageNum));
+        setOcrStatusMessage(`PDF 총 ${allPages.length}페이지 로드 완료. 체크박스로 판독할 페이지를 선택하고 OCR을 실행하세요.`);
       } else {
         const reader = new FileReader();
         reader.onload = (ev) => {
-          setPreviewImage(ev.target?.result);
+          const pageObj = { pageNum: 1, dataUrl: ev.target?.result, totalPages: 1 };
+          setPdfPages([pageObj]);
+          setPreviewImage(pageObj.dataUrl);
           setPdfInfo({ currentPage: 1, totalPages: 1 });
-          setOcrStatusMessage('이미지 불러오기 완료. 글씨를 보며 타이핑하거나 [AI 손글씨 인식]을 눌러보세요.');
+          setSelectedPages([1]);
+          setOcrStatusMessage('이미지 불러오기 완료. [전체 페이지 OCR 적용]을 눌러보세요.');
         };
         reader.readAsDataURL(file);
       }
@@ -113,25 +127,43 @@ export default function InputPanel({
   };
 
   // PDF 페이지 변경
-  const handleChangePdfPage = async (delta) => {
-    if (!uploadedFile || pdfInfo.totalPages <= 1) return;
-    const nextPage = pdfInfo.currentPage + delta;
-    if (nextPage < 1 || nextPage > pdfInfo.totalPages) return;
+  const handleChangePdfPage = (delta) => {
+    if (pdfPages.length <= 1) return;
+    const nextIdx = (pdfInfo.currentPage - 1) + delta;
+    if (nextIdx < 0 || nextIdx >= pdfPages.length) return;
+    const target = pdfPages[nextIdx];
+    setPreviewImage(target.dataUrl);
+    setPdfInfo({ currentPage: target.pageNum, totalPages: pdfPages.length });
+  };
 
-    try {
-      setOcrStatusMessage(`PDF ${nextPage}페이지 렌더링 중...`);
-      const result = await renderPdfToImage(uploadedFile, nextPage);
-      setPreviewImage(result.dataUrl);
-      setPdfInfo({ currentPage: nextPage, totalPages: result.numPages });
-      setOcrStatusMessage(`PDF ${nextPage}페이지 렌더링 완료.`);
-    } catch (err) {
-      setInputError('페이지 이동 중 오류: ' + err.message);
+  const handleSelectPreviewPage = (pageNum) => {
+    const target = pdfPages.find(p => p.pageNum === pageNum);
+    if (target) {
+      setPreviewImage(target.dataUrl);
+      setPdfInfo({ currentPage: target.pageNum, totalPages: pdfPages.length });
     }
   };
 
-  // AI 손글씨 자동 판독 (OCR)
-  const handleRunOcr = async () => {
-    if (!previewImage) {
+  const togglePageSelection = (pageNum) => {
+    setSelectedPages(prev =>
+      prev.includes(pageNum)
+        ? prev.filter(p => p !== pageNum)
+        : [...prev, pageNum].sort((a, b) => a - b)
+    );
+  };
+
+  const handleSelectAllPages = () => {
+    setSelectedPages(pdfPages.map(p => p.pageNum));
+  };
+
+  const handleDeselectAllPages = () => {
+    setSelectedPages([]);
+  };
+
+  // 전체 페이지 일괄 OCR 실행
+  const handleRunAllPagesOcr = async () => {
+    const pagesToRun = pdfPages.length > 0 ? pdfPages : (previewImage ? [{ pageNum: 1, dataUrl: previewImage }] : []);
+    if (pagesToRun.length === 0) {
       setInputError('먼저 스캔한 PDF나 사진을 업로드해주세요.');
       return;
     }
@@ -140,27 +172,97 @@ export default function InputPanel({
       return;
     }
 
+    setSelectedPages(pagesToRun.map(p => p.pageNum));
     setIsExtractingOcr(true);
-    setOcrStatusMessage('AI가 어린이 손글씨를 한 글자씩 꼼꼼하게 읽고 있습니다...');
     setInputError('');
+    setOcrStatusMessage(`전체 ${pagesToRun.length}개 페이지의 어린이 손글씨를 판독하고 있습니다...`);
 
     try {
-      const extracted = await extractTextFromImage({
-        apiKey,
-        base64Image: previewImage,
-        mimeType: 'image/jpeg',
-        modelName
-      });
+      const results = [];
+      for (let i = 0; i < pagesToRun.length; i++) {
+        const page = pagesToRun[i];
+        setOcrStatusMessage(`AI가 ${i + 1}/${pagesToRun.length}쪽 손글씨를 꼼꼼하게 읽고 있습니다...`);
+        const text = await extractTextFromImage({
+          apiKey,
+          base64Image: page.dataUrl,
+          mimeType: 'image/png',
+          modelName
+        });
+        if (text && text.trim()) {
+          results.push(text.trim());
+        }
+        if (i < pagesToRun.length - 1) {
+          await new Promise(r => setTimeout(r, 400));
+        }
+      }
 
-      if (extracted) {
-        setEssayText(extracted);
-        setOcrStatusMessage('✨ 판독 완료! 잘못 읽힌 글자가 있다면 우측 창에서 바로 수정해주세요.');
+      if (results.length > 0) {
+        setEssayText(results.join('\n\n'));
+        setOcrStatusMessage(`✨ 전체 ${pagesToRun.length}개 페이지 손글씨 판독 완료! 우측 창에서 글을 확인하고 첨삭을 진행하세요.`);
       } else {
         setOcrStatusMessage('인식된 텍스트가 없습니다. 직접 타이핑해주세요.');
       }
     } catch (err) {
-      setInputError(err.message);
-      setOcrStatusMessage('손글씨 판독에 실패했습니다. 직접 타이핑하여 입력해주세요.');
+      console.error(err);
+      setInputError('손글씨 판독 실패: ' + err.message);
+      setOcrStatusMessage('손글씨 판독 중 오류가 발생했습니다.');
+    } finally {
+      setIsExtractingOcr(false);
+    }
+  };
+
+  // 선택한 페이지만 OCR 실행
+  const handleRunSelectedPagesOcr = async () => {
+    if (!pdfPages || pdfPages.length === 0) {
+      setInputError('먼저 스캔한 PDF나 사진을 업로드해주세요.');
+      return;
+    }
+    if (selectedPages.length === 0) {
+      setInputError('OCR을 적용할 페이지를 체크박스로 최소 1쪽 이상 선택해주세요.');
+      return;
+    }
+    if (!apiKey) {
+      setInputError('손글씨 인식을 위해 상단에서 Gemini API 키를 먼저 등록해주세요.');
+      return;
+    }
+
+    const pagesToRun = pdfPages
+      .filter(p => selectedPages.includes(p.pageNum))
+      .sort((a, b) => a.pageNum - b.pageNum);
+
+    setIsExtractingOcr(true);
+    setInputError('');
+    setOcrStatusMessage(`선택한 ${pagesToRun.length}개 페이지 손글씨를 판독하고 있습니다...`);
+
+    try {
+      const results = [];
+      for (let i = 0; i < pagesToRun.length; i++) {
+        const page = pagesToRun[i];
+        setOcrStatusMessage(`AI가 선택된 ${page.pageNum}쪽 (${i + 1}/${pagesToRun.length}) 손글씨를 판독하고 있습니다...`);
+        const text = await extractTextFromImage({
+          apiKey,
+          base64Image: page.dataUrl,
+          mimeType: 'image/png',
+          modelName
+        });
+        if (text && text.trim()) {
+          results.push(text.trim());
+        }
+        if (i < pagesToRun.length - 1) {
+          await new Promise(r => setTimeout(r, 400));
+        }
+      }
+
+      if (results.length > 0) {
+        setEssayText(results.join('\n\n'));
+        setOcrStatusMessage(`✨ 선택한 ${pagesToRun.length}개 페이지(제 ${pagesToRun.map(p => p.pageNum).join(', ')}쪽) 판독 완료!`);
+      } else {
+        setOcrStatusMessage('인식된 텍스트가 없습니다. 직접 타이핑해주세요.');
+      }
+    } catch (err) {
+      console.error(err);
+      setInputError('선택 페이지 판독 실패: ' + err.message);
+      setOcrStatusMessage('손글씨 판독 중 오류가 발생했습니다.');
     } finally {
       setIsExtractingOcr(false);
     }
@@ -285,13 +387,34 @@ export default function InputPanel({
           {/* 학생 이름 & 글 제목 입력 바 */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
             <div className="sm:col-span-4">
-              <input
-                type="text"
-                placeholder="학생 이름 (예: 김민준, 4학년 서연이)"
-                value={studentName || ''}
-                onChange={(e) => setStudentName && setStudentName(e.target.value)}
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-hidden transition-all"
-              />
+              {students.length > 0 ? (
+                <div className="flex gap-2">
+                  <select
+                    value={studentName || ''}
+                    onChange={(e) => setStudentName && setStudentName(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-hidden transition-all"
+                  >
+                    <option value="" disabled>학생을 선택하세요</option>
+                    {students.map(s => (
+                      <option key={s.id} value={s.name}>{s.name} ({s.grade})</option>
+                    ))}
+                  </select>
+                  <button 
+                    onClick={onOpenStudentModal}
+                    className="shrink-0 px-3 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 rounded-xl text-xs font-bold transition-colors"
+                  >
+                    관리
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={onOpenStudentModal}
+                  className="w-full px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl text-xs font-bold transition-colors text-left flex justify-between items-center"
+                >
+                  <span>학생 명단을 먼저 등록해주세요</span>
+                  <span>+</span>
+                </button>
+              )}
             </div>
             <div className="sm:col-span-8">
               <input
@@ -474,26 +597,118 @@ export default function InputPanel({
                 )}
               </div>
 
-              {/* OCR 버튼 */}
+              {/* 다중 페이지인 경우 페이지별 선택 체크박스 바 */}
+              {pdfPages.length > 1 && (
+                <div className="bg-slate-900/90 rounded-2xl p-2.5 border border-slate-700 space-y-2 mt-2">
+                  <div className="flex items-center justify-between text-xs px-1">
+                    <span className="font-bold text-slate-200 flex items-center gap-1.5">
+                      <CheckSquare className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>OCR 적용 페이지 체크 ({selectedPages.length}/{pdfPages.length}쪽 선택됨)</span>
+                    </span>
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={handleSelectAllPages}
+                        className="text-indigo-300 hover:text-white font-bold hover:underline transition-colors cursor-pointer"
+                      >
+                        전체 선택
+                      </button>
+                      <span className="text-slate-600">|</span>
+                      <button
+                        type="button"
+                        onClick={handleDeselectAllPages}
+                        className="text-slate-400 hover:text-white font-medium hover:underline transition-colors cursor-pointer"
+                      >
+                        전체 해제
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 페이지 선택 칩 목록 */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {pdfPages.map(p => {
+                      const isChecked = selectedPages.includes(p.pageNum);
+                      const isCurrent = pdfInfo.currentPage === p.pageNum;
+                      return (
+                        <div
+                          key={p.pageNum}
+                          onClick={() => handleSelectPreviewPage(p.pageNum)}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                            isChecked
+                              ? 'bg-indigo-600/35 border-indigo-400 text-white shadow-xs'
+                              : 'bg-slate-900/60 border-slate-700 text-slate-400 opacity-60'
+                          } ${isCurrent ? 'ring-2 ring-amber-400' : ''}`}
+                          title={`클릭하여 ${p.pageNum}쪽 미리보기 및 선택`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              togglePageSelection(p.pageNum);
+                            }}
+                            className="w-3.5 h-3.5 accent-indigo-500 rounded cursor-pointer"
+                          />
+                          <span>{p.pageNum}쪽</span>
+                          {isCurrent && <span className="text-[10px] text-amber-300 font-normal">(보는중)</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* OCR 버튼 영역: 전체 페이지 OCR 적용 vs 선택한 페이지 OCR 적용 */}
               {previewImage && (
-                <div className="pt-2">
-                  <button
-                    onClick={handleRunOcr}
-                    disabled={isExtractingOcr}
-                    className="w-full py-2.5 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition-all"
-                  >
-                    {isExtractingOcr ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin text-indigo-200" />
-                        <span>AI가 손글씨를 판독하고 있습니다...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="w-4 h-4 text-yellow-300" />
-                        <span>AI 손글씨 자동 판독 (OCR) 실행</span>
-                      </>
-                    )}
-                  </button>
+                <div className="pt-2 space-y-2">
+                  {pdfPages.length > 1 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={handleRunAllPagesOcr}
+                        disabled={isExtractingOcr}
+                        className="w-full py-2.5 px-3 bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-600 hover:from-indigo-600 hover:to-pink-700 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                        title="1쪽부터 끝까지 모든 페이지를 순서대로 판독하여 하나로 합칩니다"
+                      >
+                        {isExtractingOcr ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                        )}
+                        <span>전체 페이지 OCR 적용 (총 {pdfPages.length}쪽)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleRunSelectedPagesOcr}
+                        disabled={isExtractingOcr || selectedPages.length === 0}
+                        className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                        title="체크박스로 선택한 페이지만 순서대로 판독하여 합칩니다"
+                      >
+                        <CheckSquare className="w-3.5 h-3.5 text-emerald-200" />
+                        <span>선택한 페이지 OCR 적용 ({selectedPages.length}쪽)</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleRunAllPagesOcr}
+                      disabled={isExtractingOcr}
+                      className="w-full py-2.5 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    >
+                      {isExtractingOcr ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-indigo-200" />
+                          <span>AI가 손글씨를 판독하고 있습니다...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="w-4 h-4 text-yellow-300" />
+                          <span>AI 손글씨 자동 판독 (전체 페이지 OCR 적용)</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -516,13 +731,25 @@ export default function InputPanel({
               {/* 학생 이름 & 글 제목 */}
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
                 <div className="sm:col-span-4">
-                  <input
-                    type="text"
-                    placeholder="학생 이름 (선택)"
-                    value={studentName || ''}
-                    onChange={(e) => setStudentName && setStudentName(e.target.value)}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:bg-white focus:border-indigo-400 outline-hidden transition-all"
-                  />
+                  {students.length > 0 ? (
+                    <select
+                      value={studentName || ''}
+                      onChange={(e) => setStudentName && setStudentName(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-indigo-400 outline-hidden transition-all"
+                    >
+                      <option value="" disabled>학생 선택</option>
+                      {students.map(s => (
+                        <option key={s.id} value={s.name}>{s.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <button 
+                      onClick={onOpenStudentModal}
+                      className="w-full px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl text-xs font-bold transition-colors text-left"
+                    >
+                      학생 등록 필요
+                    </button>
+                  )}
                 </div>
                 <div className="sm:col-span-8">
                   <input

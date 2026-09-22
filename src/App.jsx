@@ -6,8 +6,10 @@ import KoreanRulesModal from './components/KoreanRulesModal';
 import ApiKeyModal from './components/ApiKeyModal';
 import HistoryModal from './components/HistoryModal';
 import PdfOcrModal from './components/PdfOcrModal';
+import StudentManagementModal from './components/StudentManagementModal';
 import { evaluateKidsEssay } from './services/aiService';
 import { getAllHistory, saveHistoryItem, deleteHistoryItem, clearAllHistory } from './services/historyStorage';
+import { getStudents } from './services/studentStorage';
 import { SAMPLE_ESSAYS } from './data/sampleEssays';
 import { Sparkles, AlertCircle, CheckCircle, FolderCheck } from 'lucide-react';
 
@@ -20,7 +22,14 @@ export default function App() {
     return localStorage.getItem('kids_gemini_model') || 'gemini-3.1-flash-lite';
   });
   const [selectedGrade, setSelectedGrade] = useState('초등 3~4학년');
-  const [studentName, setStudentName] = useState(SAMPLE_ESSAYS[1].author);
+  
+  // 학생 명단 상태
+  const [students, setStudents] = useState(() => getStudents());
+  const [studentName, setStudentName] = useState(() => {
+    const loaded = getStudents();
+    return loaded.length > 0 ? loaded[0].name : SAMPLE_ESSAYS[1].author;
+  });
+
   const [essayTitle, setEssayTitle] = useState(SAMPLE_ESSAYS[1].title);
   const [essayText, setEssayText] = useState(SAMPLE_ESSAYS[1].text); // 기본 독후감 예시 장착
   const [feedback, setFeedback] = useState(null);
@@ -33,14 +42,16 @@ export default function App() {
   const [isApiModalOpen, setIsApiModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isPdfOcrModalOpen, setIsPdfOcrModalOpen] = useState(false);
+  const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
 
   // 기록 보관함 상태
   const [historyList, setHistoryList] = useState([]);
   const [currentHistoryId, setCurrentHistoryId] = useState(null);
 
-  // 초기 기록 보관함 IndexedDB 데이터 로드
+  // 초기 기록 보관함 및 학생 데이터 로드
   useEffect(() => {
     loadHistoryList();
+    loadStudentsList();
   }, []);
 
   const loadHistoryList = async () => {
@@ -49,6 +60,18 @@ export default function App() {
       setHistoryList(items);
     } catch (err) {
       console.error('기록 목록 로딩 실패:', err);
+    }
+  };
+
+  const loadStudentsList = () => {
+    const data = getStudents();
+    setStudents(data);
+    // 현재 선택된 학생이 명단에 없다면, 명단의 첫 번째 학생으로 자동 선택
+    if (data.length > 0) {
+      setStudentName(prev => {
+        const exists = data.some(s => s.name === prev);
+        return exists ? prev : data[0].name;
+      });
     }
   };
 
@@ -203,6 +226,7 @@ export default function App() {
         onOpenApiModal={() => setIsApiModalOpen(true)}
         onOpenHistoryModal={() => setIsHistoryModalOpen(true)}
         onOpenPdfOcrModal={() => setIsPdfOcrModalOpen(true)}
+        onOpenStudentModal={() => setIsStudentModalOpen(true)}
         historyCount={historyList.length}
         apiKey={apiKey}
         hasFeedback={!!feedback}
@@ -234,6 +258,8 @@ export default function App() {
             setEssayText={setEssayText}
             studentName={studentName}
             setStudentName={setStudentName}
+            students={students}
+            onOpenStudentModal={() => setIsStudentModalOpen(true)}
             essayTitle={essayTitle}
             setEssayTitle={setEssayTitle}
             onEvaluate={handleEvaluate}
@@ -339,18 +365,22 @@ export default function App() {
         onChangeModel={handleSaveModelName}
       />
 
-      {/* 첨삭 기록 보관함 모달 */}
+      {/* 기록 보관함 모달 */}
       <HistoryModal
         isOpen={isHistoryModalOpen}
         onClose={() => setIsHistoryModalOpen(false)}
         historyList={historyList}
-        onLoadItem={handleLoadHistoryItem}
+        students={students}
+        onLoadItem={(item) => {
+          handleLoadHistoryItem(item);
+          setIsHistoryModalOpen(false);
+        }}
         onDeleteItem={handleDeleteHistoryItem}
         onClearAll={handleClearAllHistory}
         onRefreshHistory={loadHistoryList}
       />
 
-      {/* 학생 글쓰기 PDF ➔ 마크다운 & 구글 문서 변환기 모달 */}
+      {/* PDF OCR 변환 모달 */}
       <PdfOcrModal
         isOpen={isPdfOcrModalOpen}
         onClose={() => setIsPdfOcrModalOpen(false)}
@@ -358,6 +388,13 @@ export default function App() {
         modelName={modelName}
         onOpenApiModal={() => setIsApiModalOpen(true)}
         onApplyToMain={handleApplyOcrToMain}
+      />
+
+      {/* 학생 명단 관리 모달 */}
+      <StudentManagementModal
+        isOpen={isStudentModalOpen}
+        onClose={() => setIsStudentModalOpen(false)}
+        onStudentsChange={loadStudentsList}
       />
 
     </div>
