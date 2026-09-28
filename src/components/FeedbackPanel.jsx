@@ -35,6 +35,7 @@ export default function FeedbackPanel({
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('전체');
   const [copied, setCopied] = useState(false);
   const [showSpaceGuide, setShowSpaceGuide] = useState(true);
+  const [includeWongojiInPrint, setIncludeWongojiInPrint] = useState(true);
 
   // 첨삭 완료 시 기분 좋은 축하 콘페티 효과 발생
   useEffect(() => {
@@ -478,7 +479,17 @@ export default function FeedbackPanel({
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+            <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
+              <input 
+                type="checkbox" 
+                checked={includeWongojiInPrint}
+                onChange={(e) => setIncludeWongojiInPrint(e.target.checked)}
+                className="w-3.5 h-3.5 text-rose-500 rounded-sm border-slate-300 focus:ring-rose-500"
+              />
+              <span>원고지 양식 포함</span>
+            </label>
+
             <button
               onClick={handleCopyClean}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors"
@@ -789,10 +800,10 @@ export default function FeedbackPanel({
           <div className="border-b-2 border-slate-900 pb-2 mb-3.5 flex justify-between items-end">
             <div>
               <span className="text-[10px] font-bold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded border border-indigo-300">
-                우현글쌤 7대 기준 최종 완성본 & 원고지
+                우현글쌤 7대 기준 최종 완성본{includeWongojiInPrint ? ' & 원고지' : ''}
               </span>
               <h1 className="text-lg font-black mt-0.5 text-slate-900">
-                [우현글쌤] 완성된 모범 글 & 200자 원고지 연습
+                [우현글쌤] 완성된 모범 글{includeWongojiInPrint ? ' & 200자 원고지 연습' : ''}
               </h1>
               <p className="text-[11px] text-slate-600">
                 글 제목: {essayTitle ? `『${essayTitle}』` : '제목 없음'} · 학생: {studentName || '학생'}
@@ -818,44 +829,46 @@ export default function FeedbackPanel({
             </div>
           </div>
 
-          {/* 원고지 바른 글쓰기 양식 (전체 글자수 동적 반영) */}
-          <div className="border border-slate-300 rounded-2xl p-3 bg-white print-avoid-break">
-            <div className="text-center mb-2 pb-1.5 border-b border-slate-200">
-              <h3 className="text-xs font-bold text-red-700">
-                📝 원고지 바른 글쓰기 연습 (총 {wongojiRows.length}줄 · {totalWongojiCells}칸)
-              </h3>
-              <p className="text-[10px] text-slate-500 mt-0.5">
-                모범 글의 띄어쓰기(∨)와 문장 부호를 보면서 원고지에 바르게 쓰는 연습을 해보세요.
-              </p>
+          {/* 원고지 바른 글쓰기 양식 (전체 글자수 동적 반영) - 선택사항 */}
+          {includeWongojiInPrint && (
+            <div className="border border-slate-300 rounded-2xl p-3 bg-white print-avoid-break">
+              <div className="text-center mb-2 pb-1.5 border-b border-slate-200">
+                <h3 className="text-xs font-bold text-red-700">
+                  📝 원고지 바른 글쓰기 연습 (총 {wongojiRows.length}줄 · {totalWongojiCells}칸)
+                </h3>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  모범 글의 띄어쓰기(∨)와 문장 부호를 보면서 원고지에 바르게 쓰는 연습을 해보세요.
+                </p>
+              </div>
+              
+              <div className="bg-red-400 p-[1px] rounded-lg border border-red-500 space-y-[1px]">
+                {wongojiRows.map((row, rowIdx) => (
+                  <div key={`print-row-${rowIdx}`} className="grid grid-cols-20 gap-[1px] bg-red-400 print-avoid-break break-inside-avoid">
+                    {row.map((cell, colIdx) => (
+                      <div 
+                        key={`print-cell-${rowIdx}-${colIdx}`} 
+                        className="wongoji-cell select-none text-xs aspect-square bg-white flex items-center justify-center relative"
+                      >
+                        {cell.char ? (
+                          <span className="z-10 font-bold text-slate-900 text-[10.5px]">
+                            {cell.char}
+                          </span>
+                        ) : cell.type === 'space' ? (
+                          <span className="z-10 text-[9px] font-black text-rose-300 select-none">
+                            ∨
+                          </span>
+                        ) : cell.type === 'indent' ? (
+                          <span className="z-10 text-[7px] text-amber-600/70 select-none">
+                            들임
+                          </span>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
-            
-            <div className="bg-red-400 p-[1px] rounded-lg border border-red-500 space-y-[1px]">
-              {wongojiRows.map((row, rowIdx) => (
-                <div key={`print-row-${rowIdx}`} className="grid grid-cols-20 gap-[1px] bg-red-400 print-avoid-break break-inside-avoid">
-                  {row.map((cell, colIdx) => (
-                    <div 
-                      key={`print-cell-${rowIdx}-${colIdx}`} 
-                      className="wongoji-cell select-none text-xs aspect-square bg-white flex items-center justify-center relative"
-                    >
-                      {cell.char ? (
-                        <span className="z-10 font-bold text-slate-900 text-[10.5px]">
-                          {cell.char}
-                        </span>
-                      ) : cell.type === 'space' ? (
-                        <span className="z-10 text-[9px] font-black text-rose-300 select-none">
-                          ∨
-                        </span>
-                      ) : cell.type === 'indent' ? (
-                        <span className="z-10 text-[7px] text-amber-600/70 select-none">
-                          들임
-                        </span>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
 
         </div>
 
