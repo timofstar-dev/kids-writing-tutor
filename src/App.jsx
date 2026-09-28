@@ -215,6 +215,17 @@ export default function App() {
     }
   };
 
+  // 첨삭 완료 및 초기 화면 복귀
+  const handleComplete = () => {
+    setFeedback(null);
+    setEssayText('');
+    setEssayTitle('');
+    setCurrentHistoryId(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setSaveSuccessMsg('첨삭이 완료되었습니다. 결과는 보관함에 안전하게 저장되었습니다!');
+    setTimeout(() => setSaveSuccessMsg(''), 4500);
+  };
+
   return (
     <div className="min-h-screen bg-[#faf8f5] text-slate-800 flex flex-col font-sans selection:bg-amber-200 selection:text-amber-900">
       
@@ -318,6 +329,7 @@ export default function App() {
               studentName={studentName}
               essayTitle={essayTitle}
               onOpenRulesModal={() => setIsRulesModalOpen(true)}
+              onComplete={handleComplete}
             />
           </section>
         )}

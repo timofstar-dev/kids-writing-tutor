@@ -28,7 +28,8 @@ export default function FeedbackPanel({
   originalText,
   studentName = '',
   essayTitle = '',
-  onOpenRulesModal 
+  onOpenRulesModal,
+  onComplete
 }) {
   const [activeViewTab, setActiveViewTab] = useState('proofread'); // 'proofread' | 'diff' | 'wongoji' | 'clean' | 'print'
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('전체');
@@ -612,7 +613,19 @@ export default function FeedbackPanel({
 
       </div>
 
-      {/* 4. A4 인쇄용 전용 템플릿: 초등 글쓰기 완성 첨삭 학습지 (학생 배포용 완벽 2페이지 구성) */}
+      {/* 4. 첨삭 완료 버튼 (화면 전용) */}
+      <div className="flex justify-center pt-4 pb-8 no-print">
+        <button
+          onClick={onComplete}
+          className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full text-base sm:text-lg font-black transition-all hover:scale-105 hover:shadow-xl shadow-md overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out rounded-full" />
+          <CheckCircle2 className="w-6 h-6 relative z-10" />
+          <span className="relative z-10">첨삭 완료하고 처음으로 가기</span>
+        </button>
+      </div>
+
+      {/* 5. A4 인쇄용 전용 템플릿: 초등 글쓰기 완성 첨삭 학습지 (학생 배포용 완벽 2페이지 구성) */}
       <div className="hidden print:block p-2 bg-white text-slate-900">
         
         {/* [1쪽] 총평, 7대 성취도 진단, 문장별 1:1 첨삭 클리닉 ("위의 것" 완벽 반영) */}
